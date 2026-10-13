@@ -353,7 +353,8 @@ struct ActiveTagToken: View {
     @Environment(\.tagColors) private var tagColors
 
     var body: some View {
-        let tint = tagColors.tagColor(for: tag)?.color ?? Color.accentColor
+        // Bez nastavené barvy neutrální šedá (ne modrá).
+        let tint = tagColors.tagColor(for: tag)?.color ?? Color.gray
         HStack(spacing: 4) {
             Image(systemName: "tag.fill")
                 .font(.system(size: 10, weight: .semibold))
@@ -392,7 +393,7 @@ struct TagBubble: View {
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(
                     tagColor.map { AnyShapeStyle($0) }
-                        ?? (isHighlighted ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(HierarchicalShapeStyle.secondary))
+                        ?? (isHighlighted ? AnyShapeStyle(HierarchicalShapeStyle.primary) : AnyShapeStyle(HierarchicalShapeStyle.secondary))
                 )
             Text(tag)
                 .font(.system(size: 13, weight: isHighlighted ? .semibold : .medium))
@@ -411,8 +412,12 @@ struct TagBubble: View {
             interactive: true,
             fallback: Color.secondary.opacity(isHighlighted ? 0.22 : 0.1)
         )
+        // Obrys v barvě štítku; štítky bez barvy mají neutrální obrys.
         .overlay(
-            Capsule().strokeBorder(Color.accentColor.opacity(isHighlighted ? 0.9 : 0), lineWidth: 1.5)
+            Capsule().strokeBorder(
+                (tagColor ?? Color.primary).opacity(isHighlighted ? (tagColor == nil ? 0.45 : 0.9) : 0),
+                lineWidth: 1.5
+            )
         )
         .fixedSize()
     }
