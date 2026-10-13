@@ -1,0 +1,50 @@
+import AppKit
+
+/// Plovoucí panel ve stylu Spotlightu – neaktivuje aplikaci, je nad ostatními okny i nad fullscreenem.
+final class LauncherPanel: NSPanel {
+    init() {
+        super.init(
+            contentRect: NSRect(x: 0, y: 0, width: LauncherLayout.width, height: 300),
+            styleMask: [.borderless, .nonactivatingPanel, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        isFloatingPanel = true
+        level = .statusBar
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient, .ignoresCycle]
+        hidesOnDeactivate = false
+        becomesKeyOnlyIfNeeded = false
+        isMovable = false
+        isMovableByWindowBackground = false
+        isOpaque = false
+        backgroundColor = .clear
+        hasShadow = true
+        animationBehavior = .none
+        isReleasedWhenClosed = false
+    }
+
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { false }
+
+    /// Obsah s efektem vibrancy a zaoblenými rohy.
+    static func makeBackground(cornerRadius: CGFloat = 14) -> NSVisualEffectView {
+        let effect = NSVisualEffectView()
+        effect.material = .popover
+        effect.blendingMode = .behindWindow
+        effect.state = .active
+        effect.maskImage = roundedMask(radius: cornerRadius)
+        return effect
+    }
+
+    private static func roundedMask(radius: CGFloat) -> NSImage {
+        let edge = radius * 2 + 1
+        let image = NSImage(size: NSSize(width: edge, height: edge), flipped: false) { rect in
+            NSColor.black.setFill()
+            NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
+            return true
+        }
+        image.capInsets = NSEdgeInsets(top: radius, left: radius, bottom: radius, right: radius)
+        image.resizingMode = .stretch
+        return image
+    }
+}

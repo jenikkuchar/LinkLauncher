@@ -1,0 +1,16 @@
+# Generováno XcodeGenem
+*.xcodeproj/
+*.xcworkspace/
+
+# Build
+build/
+DerivedData/
+.build/
+.swiftpm/
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+
+# macOS
+.DS_Store

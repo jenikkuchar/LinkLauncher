@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate project
+        run: xcodegen generate
+
+      - name: Build & test
+        run: |
+          set -o pipefail
+          xcodebuild -version
+          xcodebuild \
+            -project LinkLauncher.xcodeproj \
+            -scheme LinkLauncher \
+            -destination 'platform=macOS' \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGN_IDENTITY=- \
+            test
+
+      - name: Build Release
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project LinkLauncher.xcodeproj \
+            -scheme LinkLauncher \
+            -configuration Release \
+            -destination 'generic/platform=macOS' \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGN_IDENTITY=- \
+            build
