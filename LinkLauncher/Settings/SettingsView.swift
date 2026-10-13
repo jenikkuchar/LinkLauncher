@@ -23,15 +23,19 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section("Launcher") {
-                HStack {
-                    KeyboardShortcuts.Recorder("Klávesová zkratka:", name: .toggleLauncher) { newShortcut in
-                        shortcut = newShortcut
+                LabeledContent("Klávesová zkratka") {
+                    HStack(spacing: 8) {
+                        KeyboardShortcuts.Recorder(for: .toggleLauncher) { newShortcut in
+                            shortcut = newShortcut
+                        }
+                        .fixedSize()
+                        Button("Obnovit výchozí") {
+                            KeyboardShortcuts.reset(.toggleLauncher)
+                            shortcut = KeyboardShortcuts.getShortcut(for: .toggleLauncher)
+                        }
+                        .disabled(isDefaultShortcut)
+                        .help("Nastavit výchozí zkratku \(defaultShortcutText)")
                     }
-                    Button("Obnovit výchozí (\(defaultShortcutText))") {
-                        KeyboardShortcuts.reset(.toggleLauncher)
-                        shortcut = KeyboardShortcuts.getShortcut(for: .toggleLauncher)
-                    }
-                    .disabled(isDefaultShortcut)
                 }
                 if shortcut == nil {
                     Text("Zkratka není nastavená – launcher otevřete z ikony v menu baru.")

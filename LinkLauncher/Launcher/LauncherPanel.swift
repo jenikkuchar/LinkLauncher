@@ -44,10 +44,26 @@ final class LauncherPanel: NSPanel {
 
         #if compiler(>=6.2)
         if #available(macOS 26.0, *) {
+            let radius: CGFloat = 22
             let glass = NSGlassEffectView()
-            glass.cornerRadius = 22
+            glass.cornerRadius = radius
+            glass.autoresizingMask = [.width, .height]
             glass.contentView = content
-            return glass
+            // Obsah (pole, ikona) se jinak neořezává podle zaoblení a v rozích prosvítá.
+            content.wantsLayer = true
+            content.layer?.cornerRadius = radius
+            content.layer?.cornerCurve = .continuous
+            content.layer?.masksToBounds = true
+            // Ořezat i celý panel – nic nesmí kreslit mimo zaoblený tvar skla.
+            let container = NSView()
+            container.wantsLayer = true
+            container.layer?.backgroundColor = NSColor.clear.cgColor
+            container.layer?.cornerRadius = radius
+            container.layer?.cornerCurve = .continuous
+            container.layer?.masksToBounds = true
+            glass.frame = container.bounds
+            container.addSubview(glass)
+            return container
         }
         #endif
 
