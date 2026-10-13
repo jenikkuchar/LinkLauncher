@@ -68,7 +68,7 @@ struct LauncherView: View {
         if let last = model.activeTags.last {
             return model.activeTags.count == 1 ? "Hledat v #\(last)…" : "Hledat ve vybraných štítcích…"
         }
-        return "Hledat odkazy…   (Tab = štítky)"
+        return "Hledat odkazy…"
     }
 
     /// Řada „bublin“ se štítky (Tab), podobně jako výběr kategorie ve Spotlightu.
@@ -350,10 +350,11 @@ struct ActiveTagToken: View {
             .buttonStyle(.plain)
             .help("Odebrat štítek (⌫)")
         }
-        .foregroundStyle(Color.white)
+        .foregroundStyle(Color.primary)
         .padding(.horizontal, 9)
         .padding(.vertical, 4)
-        .liquidGlass(in: Capsule(), tint: Color.accentColor, fallback: Color.accentColor)
+        .liquidGlass(in: Capsule(), tint: Color.accentColor.opacity(0.25), fallback: Color.accentColor.opacity(0.2))
+        .overlay(Capsule().strokeBorder(Color.accentColor.opacity(0.5), lineWidth: 1))
         .fixedSize()
     }
 }
@@ -369,24 +370,27 @@ struct TagBubble: View {
         HStack(spacing: 6) {
             Image(systemName: "tag.fill")
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(isHighlighted ? AnyShapeStyle(Color.white) : AnyShapeStyle(Color.accentColor))
+                .foregroundStyle(isHighlighted ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(HierarchicalShapeStyle.secondary))
             Text(tag)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 13, weight: isHighlighted ? .semibold : .medium))
                 .lineLimit(1)
             Text("\(count)")
                 .font(.system(size: 11, weight: .medium, design: .rounded))
-                .foregroundStyle(isHighlighted ? AnyShapeStyle(Color.white.opacity(0.8)) : AnyShapeStyle(HierarchicalShapeStyle.secondary))
+                .foregroundStyle(.secondary)
         }
-        .foregroundStyle(isHighlighted ? Color.white : Color.primary)
+        .foregroundStyle(isHighlighted ? Color.primary : Color.secondary)
         .padding(.horizontal, 12)
-        .frame(height: 32)
+        .frame(height: 30)
+        // Zvýraznění jen jemně (obrys), aby se nebilo s modrým výběrem odkazu.
         .liquidGlass(
             in: Capsule(),
-            tint: isHighlighted ? Color.accentColor : nil,
+            tint: isHighlighted ? Color.white.opacity(0.12) : nil,
             interactive: true,
-            fallback: isHighlighted ? Color.accentColor : Color.secondary.opacity(0.15)
+            fallback: Color.secondary.opacity(isHighlighted ? 0.22 : 0.1)
         )
-        .scaleEffect(isHighlighted ? 1.06 : 1)
+        .overlay(
+            Capsule().strokeBorder(Color.accentColor.opacity(isHighlighted ? 0.9 : 0), lineWidth: 1.5)
+        )
         .fixedSize()
     }
 }
