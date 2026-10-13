@@ -59,6 +59,7 @@ final class LauncherController: NSObject, NSWindowDelegate {
         )
         panel.setFrame(frame, display: false)
         panel.makeKeyAndOrderFront(nil)
+        if panel.hasShadow { panel.invalidateShadow() }
         installKeyMonitor()
     }
 
@@ -83,7 +84,7 @@ final class LauncherController: NSObject, NSWindowDelegate {
         frame.size.height = height
         frame.origin.y = top - height
         panel.setFrame(frame, display: true)
-        panel.invalidateShadow()
+        if panel.hasShadow { panel.invalidateShadow() }
     }
 
     private static func screenWithMouse() -> NSScreen {
