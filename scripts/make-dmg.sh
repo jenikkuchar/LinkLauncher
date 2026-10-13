@@ -42,7 +42,7 @@ echo "▸ Připravuji obsah DMG…"
 ditto "$APP" "$STAGING/$APP_NAME.app"
 ln -s /Applications "$STAGING/Applications"
 
-echo "▸ Vytvářím $DMG…"
+echo "▸ Vytvářím ${DMG}…"
 rm -f "$DMG"
 hdiutil create \
     -volname "$APP_NAME $VERSION" \
