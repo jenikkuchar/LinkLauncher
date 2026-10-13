@@ -23,8 +23,8 @@ struct Link: Codable, Identifiable, Hashable {
         self.title = title
         self.url = url
         self.tags = Tag.normalizeList(tags)
-        self.createdAt = createdAt
-        self.lastOpenedAt = lastOpenedAt
+        self.createdAt = createdAt.wholeSeconds
+        self.lastOpenedAt = lastOpenedAt?.wholeSeconds
         self.openCount = openCount
     }
 
@@ -80,5 +80,12 @@ struct LinkDatabase: Codable, Equatable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         version = try c.decodeIfPresent(Int.self, forKey: .version) ?? LinkDatabase.currentVersion
         links = try c.decodeIfPresent([Link].self, forKey: .links) ?? []
+    }
+}
+
+extension Date {
+    /// JSON ukládá data s přesností na sekundy – stejně je držíme i v paměti.
+    var wholeSeconds: Date {
+        Date(timeIntervalSinceReferenceDate: timeIntervalSinceReferenceDate.rounded(.down))
     }
 }

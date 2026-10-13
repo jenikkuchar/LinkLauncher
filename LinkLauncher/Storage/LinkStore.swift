@@ -164,7 +164,7 @@ final class LinkStore: ObservableObject {
     func recordOpen(_ id: Link.ID, at date: Date = Date()) {
         guard let i = links.firstIndex(where: { $0.id == id }) else { return }
         links[i].openCount += 1
-        links[i].lastOpenedAt = date
+        links[i].lastOpenedAt = date.wholeSeconds
         save()
     }
 
