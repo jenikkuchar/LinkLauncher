@@ -43,3 +43,15 @@ jobs:
             -derivedDataPath build/DerivedData \
             CODE_SIGN_IDENTITY=- \
             build
+
+      - name: Create DMG
+        if: matrix.os == 'macos-15'
+        run: scripts/make-dmg.sh
+
+      - name: Upload DMG
+        if: matrix.os == 'macos-15'
+        uses: actions/upload-artifact@v4
+        with:
+          name: LinkLauncher-dmg
+          path: build/LinkLauncher-*.dmg
+          if-no-files-found: error
