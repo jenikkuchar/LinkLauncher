@@ -7,7 +7,8 @@ enum LauncherLayout {
     static let suggestionsHeight: CGFloat = 34
     static let rowHeight: CGFloat = 44
     static let listPadding: CGFloat = 6
-    static let maxVisibleRows = 10
+    /// 9 viditelných řádků = přesně ty, které mají zkratku ⌘1–⌘9; další po scrollování.
+    static let maxVisibleRows = 9
     static let emptyHeight: CGFloat = 44
     static let tagPickerHeight: CGFloat = 48
 }
