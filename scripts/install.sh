@@ -42,7 +42,7 @@ if pgrep -x "$APP_NAME" >/dev/null; then
     pkill -x "$APP_NAME" 2>/dev/null || true
 fi
 
-echo "▸ Kopíruji do $DEST…"
+echo "▸ Kopíruji do ${DEST}…"
 rm -rf "$DEST"
 ditto "$BUILT" "$DEST"
 

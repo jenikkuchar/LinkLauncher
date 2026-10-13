@@ -16,6 +16,16 @@ Globální zkratka (výchozí **⌘⇧Space**) otevře plovoucí panel, napíše
 scripts/install.sh        # build Release → /Applications/LinkLauncher.app a spuštění
 ```
 
+Instalační DMG (aplikace + odkaz na složku Aplikace):
+
+```bash
+scripts/make-dmg.sh       # → build/LinkLauncher-<verze>.dmg
+```
+
+DMG se vytváří i v CI (artefakt `LinkLauncher-dmg` u každého běhu workflow).
+Aplikace je podepsaná jen ad-hoc a není notarizovaná – na jiném Macu ji poprvé
+otevřete přes pravý klik → Otevřít (nebo `xattr -dr com.apple.quarantine /Applications/LinkLauncher.app`).
+
 Vývoj v Xcode:
 
 ```bash
