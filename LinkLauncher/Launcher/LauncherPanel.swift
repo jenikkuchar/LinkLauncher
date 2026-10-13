@@ -19,13 +19,23 @@ final class LauncherPanel: NSPanel {
         isMovableByWindowBackground = false
         isOpaque = false
         backgroundColor = .clear
-        hasShadow = true
+        // Liquid Glass má vlastní okraj i hloubku. Stín okna by se počítal z obdélníku
+        // celého panelu a v rozích a kolem skla by prosvítal jako tmavý rámeček.
+        hasShadow = !Self.usesLiquidGlass
         animationBehavior = .none
         isReleasedWhenClosed = false
     }
 
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
+
+    /// Zda se pozadí kreslí jako Liquid Glass (macOS 26 a sestavení v Xcode 26).
+    static var usesLiquidGlass: Bool {
+        #if compiler(>=6.2)
+        if #available(macOS 26.0, *) { return true }
+        #endif
+        return false
+    }
 
     /// Pozadí panelu se zaoblenými rohy: na macOS 26 Liquid Glass, jinak vibrancy.
     static func makeBackground(content: NSView) -> NSView {
