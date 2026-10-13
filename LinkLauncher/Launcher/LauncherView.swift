@@ -5,6 +5,7 @@ import AppKit
 struct LauncherView: View {
     @ObservedObject var model: LauncherModel
     @ObservedObject var favicons: FaviconStore
+    @Namespace private var selectionNamespace
 
     var body: some View {
         VStack(spacing: 0) {
@@ -62,7 +63,12 @@ struct LauncherView: View {
                     .font(.system(size: 12, weight: .medium))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .background(Capsule().fill(Color.accentColor.opacity(index == 0 ? 0.25 : 0.12)))
+                    .liquidGlass(
+                        in: Capsule(),
+                        tint: index == 0 ? Color.accentColor.opacity(0.35) : nil,
+                        interactive: true,
+                        fallback: Color.accentColor.opacity(index == 0 ? 0.25 : 0.12)
+                    )
                 }
                 .buttonStyle(.plain)
             }
@@ -84,6 +90,12 @@ struct LauncherView: View {
                             isSelected: index == model.selectedIndex,
                             favicon: URLTools.host(of: link.url).flatMap { favicons.image(forHost: $0) }
                         )
+                        .background {
+                            if index == model.selectedIndex {
+                                SelectionHighlight()
+                                    .matchedGeometryEffect(id: "selection", in: selectionNamespace)
+                            }
+                        }
                         .id(link.id)
                         .contentShape(Rectangle())
                         .onTapGesture { model.open(at: index) }
@@ -91,6 +103,7 @@ struct LauncherView: View {
                     }
                 }
                 .padding(LauncherLayout.listPadding)
+                .animation(.easeOut(duration: 0.12), value: model.selectedIndex)
             }
             .frame(height: visibleRows * LauncherLayout.rowHeight + LauncherLayout.listPadding * 2)
             .onChange(of: model.selectedIndex) { _, index in
@@ -147,10 +160,6 @@ struct LauncherRow: View {
         .padding(.horizontal, 10)
         .frame(height: LauncherLayout.rowHeight)
         .foregroundStyle(isSelected ? Color.white : Color.primary)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(isSelected ? Color.accentColor : Color.clear)
-        )
     }
 }
 

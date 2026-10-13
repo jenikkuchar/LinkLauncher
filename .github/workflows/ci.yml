@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, macos-15]
+        os: [macos-14, macos-15, macos-26]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -45,11 +45,11 @@ jobs:
             build
 
       - name: Create DMG
-        if: matrix.os == 'macos-15'
+        if: matrix.os == 'macos-26'
         run: scripts/make-dmg.sh
 
       - name: Upload DMG
-        if: matrix.os == 'macos-15'
+        if: matrix.os == 'macos-26'
         uses: actions/upload-artifact@v4
         with:
           name: LinkLauncher-dmg
