@@ -70,6 +70,7 @@ enum ChromeImportPlanner {
             case .nearestFolder: tags = path.last.map { [$0] } ?? []
             case .fullPath: tags = path
             }
+            tags.append(contentsOf: node.tags)
             if !extra.isEmpty { tags.append(extra) }
             let title = node.name.trimmingCharacters(in: .whitespacesAndNewlines)
             plan.links.append(Link(title: title, url: url, tags: tags, createdAt: now))

@@ -82,6 +82,24 @@ V okně importu soubor vyberte (nebo ho přetáhněte do okna), zaškrtněte slo
 a zvolte, zda se názvy složek mají stát štítky (nejbližší složka / celá cesta).
 Duplicitní URL se přeskočí.
 
+**Text** – odkazy vložené do textového pole nebo načtené ze souboru `.txt`/`.md`,
+jeden na řádek:
+
+```
+https://jira.example.com Jira #práce #pm          URL, název, #štítky (libovolné pořadí)
+Wiki | https://wiki.example.com | práce, docs      sloupce: název | URL | štítky
+- [GitHub](https://github.com) #vývoj              Markdown odkaz
+# Práce                                            nadpis = složka (## = podsložka)
+Nástroje:                                          řádek s dvojtečkou = složka
+// komentář
+```
+
+Složky se chovají jako u záložek (volba „Názvy složek jako štítky“). Řádky bez URL se
+přeskočí, odkazům bez názvu se po importu načte titulek stránky.
+
+Ve správě odkazů nabídka **Štítky** (kontextové menu i toolbar) ukazuje všechny štítky
+s fajfkou u přiřazených; kliknutím štítek přidáte/odeberete, „Nový štítek…“ vytvoří nový.
+
 ## Data
 
 `~/Library/Application Support/LinkLauncher/links.json` – čitelný JSON (seřazené klíče),

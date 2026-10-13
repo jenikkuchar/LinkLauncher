@@ -9,6 +9,8 @@ struct BookmarkNode: Identifiable, Hashable {
     let children: [BookmarkNode]
     /// Kořenová složka (celý soubor, Panel záložek) – její název se nepoužívá jako štítek.
     let isRoot: Bool
+    /// Štítky zapsané přímo u odkazu (import z textu).
+    var tags: [String] = []
 
     var isFolder: Bool { url == nil }
     /// Pro hierarchický `List` – odkazy nemají potomky.
