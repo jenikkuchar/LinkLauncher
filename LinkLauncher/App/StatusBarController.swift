@@ -33,7 +33,7 @@ final class StatusBarController: NSObject {
         menu.addItem(open)
         menu.addItem(.separator())
         menu.addItem(item("Spravovat odkazy…", #selector(manageLinks)))
-        menu.addItem(item("Importovat záložky (HTML)…", #selector(importChrome)))
+        menu.addItem(item("Importovat záložky…", #selector(importChrome)))
         menu.addItem(.separator())
         let settings = item("Nastavení…", #selector(openSettings))
         settings.keyEquivalent = ","

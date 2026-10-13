@@ -60,8 +60,14 @@ Prázdný dotaz řadí podle frecency (počet otevření × čerstvost).
 
 ## Import záložek
 
-Import čte HTML export záložek (formát Netscape Bookmark File), který umí Chrome, Safari,
-Firefox i Edge:
+Okno importu (menu bar → Importovat záložky…) má dva zdroje:
+
+**Profil Chrome** – načte záložky přímo z profilu v `~/Library/Application Support/Google/Chrome/`
+(výběr profilu, jména z `Local State`). macOS se může zeptat na přístup k datům jiných
+aplikací – povolte ho v Nastavení systému → Soukromí a zabezpečení.
+
+**HTML soubor** – export záložek (formát Netscape Bookmark File) z Chrome, Safari,
+Firefoxu nebo Edge:
 
 - **Chrome:** Správce záložek (⌥⌘B) → ⋮ → Exportovat záložky
 - **Safari:** Soubor → Exportovat → Záložky…
@@ -105,7 +111,7 @@ LinkLauncher/
   Launcher/   NSPanel, SwiftUI view, ovládání klávesnicí
   Search/     fuzzy matching, parser dotazu (#štítky), frecency
   Manager/    okno správy odkazů a štítků, editor
-  Import/     parser HTML exportu záložek, plán importu, UI
+  Import/     Chrome profily a parser Bookmarks, parser HTML exportu, plán importu, UI
   Settings/   nastavení
   Storage/    LinkStore (načítání, ukládání, sledování souboru), JSON kodek
   Services/   načítání titulku stránky, favicony

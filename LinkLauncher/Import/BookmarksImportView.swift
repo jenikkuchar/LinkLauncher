@@ -14,8 +14,29 @@ enum CheckState {
     }
 }
 
+enum ImportSource: String, CaseIterable, Identifiable {
+    case chromeProfile
+    case htmlFile
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .chromeProfile: return "Profil Chrome"
+        case .htmlFile: return "HTML soubor"
+        }
+    }
+}
+
 @MainActor
 final class BookmarksImportModel: ObservableObject {
+    @Published var source: ImportSource = .chromeProfile {
+        didSet { if source != oldValue { reloadSource() } }
+    }
+    @Published private(set) var profiles: [ChromeProfile] = []
+    @Published var selectedProfileID: String? {
+        didSet { if selectedProfileID != oldValue, source == .chromeProfile { loadProfileBookmarks() } }
+    }
     @Published private(set) var fileURL: URL?
     @Published private(set) var roots: [BookmarkNode] = []
     @Published private(set) var selected = Set<String>()
@@ -25,6 +46,57 @@ final class BookmarksImportModel: ObservableObject {
 
     /// ID složky → ID všech odkazů v jejím podstromu.
     private var leavesByFolder: [String: [String]] = [:]
+
+    /// Znovu načte aktuální zdroj (profily Chrome, nebo vybraný HTML soubor).
+    func reloadSource() {
+        switch source {
+        case .chromeProfile:
+            reloadProfiles()
+        case .htmlFile:
+            if let fileURL {
+                loadHTML(fileURL)
+            } else {
+                setRoots([])
+                errorMessage = nil
+            }
+        }
+    }
+
+    // MARK: Profil Chrome
+
+    private func reloadProfiles() {
+        profiles = ChromeProfileLocator.profiles()
+        if profiles.isEmpty {
+            setRoots([])
+            errorMessage = "Nenalezen žádný profil Chrome se záložkami v ~/Library/Application Support/Google/Chrome. "
+                + "Pokud Chrome používáte, povolte aplikaci LinkLauncher přístup v Nastavení systému → Soukromí a zabezpečení, "
+                + "nebo použijte import z HTML souboru."
+            return
+        }
+        errorMessage = nil
+        if let current = selectedProfileID, profiles.contains(where: { $0.id == current }) {
+            loadProfileBookmarks()
+        } else {
+            selectedProfileID = profiles.first?.id
+        }
+    }
+
+    private func loadProfileBookmarks() {
+        guard let profile = profiles.first(where: { $0.id == selectedProfileID }) else {
+            setRoots([])
+            return
+        }
+        do {
+            let data = try Data(contentsOf: profile.bookmarksURL)
+            setRoots(try ChromeBookmarksParser.parse(data: data))
+            errorMessage = roots.isEmpty ? "Profil neobsahuje žádné záložky." : nil
+        } catch {
+            setRoots([])
+            errorMessage = "Záložky se nepodařilo načíst: \(error.localizedDescription)"
+        }
+    }
+
+    // MARK: HTML soubor
 
     func chooseFile() {
         let panel = NSOpenPanel()
@@ -36,22 +108,32 @@ final class BookmarksImportModel: ObservableObject {
             panel.directoryURL = downloads
         }
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        load(url)
+        loadHTML(url)
     }
 
-    func load(_ url: URL) {
-        selected.removeAll()
-        leavesByFolder.removeAll()
+    func loadHTML(_ url: URL) {
+        if source != .htmlFile {
+            fileURL = url
+            source = .htmlFile // didSet načte soubor
+            return
+        }
         fileURL = url
         do {
-            let data = try Data(contentsOf: url)
-            roots = try BookmarksHTMLParser.parse(data: data)
+            setRoots(try BookmarksHTMLParser.parse(data: Data(contentsOf: url)))
             errorMessage = nil
-            for root in roots { indexLeaves(root) }
         } catch {
-            roots = []
+            setRoots([])
             errorMessage = error.localizedDescription
         }
+    }
+
+    // MARK: Výběr
+
+    private func setRoots(_ newRoots: [BookmarkNode]) {
+        selected.removeAll()
+        leavesByFolder.removeAll()
+        roots = newRoots
+        for root in newRoots { indexLeaves(root) }
     }
 
     @discardableResult
@@ -125,15 +207,44 @@ struct BookmarksImportView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Button("Vybrat soubor…") { model.chooseFile() }
-                if let url = model.fileURL {
-                    Label(url.lastPathComponent, systemImage: "doc.text")
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                        .foregroundStyle(.secondary)
+            Picker("Zdroj:", selection: $model.source) {
+                ForEach(ImportSource.allCases) { Text($0.label).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .frame(maxWidth: 320)
+
+            switch model.source {
+            case .chromeProfile:
+                HStack {
+                    Picker("Profil:", selection: $model.selectedProfileID) {
+                        ForEach(model.profiles) { profile in
+                            Text(profile.displayName == profile.directoryName
+                                 ? profile.displayName
+                                 : "\(profile.displayName) (\(profile.directoryName))")
+                                .tag(Optional(profile.id))
+                        }
+                    }
+                    .frame(maxWidth: 360)
+                    .disabled(model.profiles.isEmpty)
+                    Button {
+                        model.reloadSource()
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .help("Znovu načíst profily a záložky")
+                    Spacer()
                 }
-                Spacer()
+            case .htmlFile:
+                HStack {
+                    Button("Vybrat soubor…") { model.chooseFile() }
+                    if let url = model.fileURL {
+                        Label(url.lastPathComponent, systemImage: "doc.text")
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
             }
 
             if let error = model.errorMessage {
@@ -142,7 +253,11 @@ struct BookmarksImportView: View {
             }
 
             if model.roots.isEmpty {
-                instructions
+                if model.source == .htmlFile {
+                    instructions
+                } else {
+                    Spacer(minLength: 240)
+                }
             } else {
                 List(model.roots, children: \.optionalChildren) { node in
                     BookmarkRow(node: node, state: model.state(of: node)) {
@@ -184,9 +299,10 @@ struct BookmarksImportView: View {
         }
         .padding(16)
         .frame(minWidth: 560, minHeight: 520)
+        .onAppear { model.reloadSource() }
         .dropDestination(for: URL.self) { urls, _ in
             guard let url = urls.first(where: { $0.isFileURL }) else { return false }
-            model.load(url)
+            model.loadHTML(url)
             return true
         } isTargeted: { isDropTargeted = $0 }
         .alert("Import dokončen", isPresented: Binding(get: { summary != nil }, set: { if !$0 { summary = nil } })) {

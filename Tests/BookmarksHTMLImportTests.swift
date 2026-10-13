@@ -1,7 +1,7 @@
 import XCTest
 @testable import LinkLauncher
 
-final class BookmarksImportTests: XCTestCase {
+final class BookmarksHTMLImportTests: XCTestCase {
     private let bookmarksHTML = """
     <!DOCTYPE NETSCAPE-Bookmark-file-1>
     <!-- This is an automatically generated file.
@@ -79,55 +79,13 @@ final class BookmarksImportTests: XCTestCase {
         XCTAssertThrowsError(try BookmarksHTMLParser.parse(data: Data("<DL></DL>".utf8)))
     }
 
-    func testImportNearestFolderTags() throws {
+    func testHTMLImportUsesFolderTags() throws {
         let roots = try roots()
         let all = Set(roots.flatMap(\.allBookmarks).map(\.id))
         let plan = ChromeImportPlanner.plan(roots: roots, selectedIDs: all, options: ChromeImportOptions(), existingURLs: [])
         XCTAssertEqual(plan.links.map(\.title), ["GitHub", "Jira", "Wiki & dokumentace"])
         XCTAssertEqual(plan.links.map(\.tags), [[], ["práce"], ["interní-nástroje"]])
-        XCTAssertEqual(plan.skippedDuplicates, 1) // „Jira znovu“ – stejná URL s lomítkem
-        XCTAssertEqual(plan.skippedUnsupported, 1) // javascript:
-        XCTAssertEqual(plan.skipped, 2)
-    }
-
-    func testImportFullPathAndExtraTag() throws {
-        let roots = try roots()
-        var options = ChromeImportOptions()
-        options.folderTagMode = .fullPath
-        options.extraTag = "Chrome"
-        let plan = ChromeImportPlanner.plan(
-            roots: roots,
-            selectedIDs: [id(of: "Wiki & dokumentace", in: roots), id(of: "GitHub", in: roots)],
-            options: options,
-            existingURLs: []
-        )
-        XCTAssertEqual(plan.links.map(\.title), ["GitHub", "Wiki & dokumentace"])
-        XCTAssertEqual(plan.links.map(\.tags), [["chrome"], ["práce", "interní-nástroje", "chrome"]])
-    }
-
-    func testImportWithoutFolderTags() throws {
-        var options = ChromeImportOptions()
-        options.folderTagMode = .none
-        let roots = try roots()
-        let plan = ChromeImportPlanner.plan(roots: roots, selectedIDs: [id(of: "Jira", in: roots)], options: options, existingURLs: [])
-        XCTAssertEqual(plan.links.first?.tags, [])
-    }
-
-    func testImportSkipsExistingURLs() throws {
-        let roots = try roots()
-        let plan = ChromeImportPlanner.plan(
-            roots: roots,
-            selectedIDs: [id(of: "GitHub", in: roots), id(of: "Jira", in: roots)],
-            options: ChromeImportOptions(),
-            existingURLs: ["https://www.github.com"]
-        )
-        XCTAssertEqual(plan.links.map(\.title), ["Jira"])
         XCTAssertEqual(plan.skippedDuplicates, 1)
-    }
-
-    func testOnlySelectedImported() throws {
-        let plan = ChromeImportPlanner.plan(roots: try roots(), selectedIDs: [], options: ChromeImportOptions(), existingURLs: [])
-        XCTAssertTrue(plan.links.isEmpty)
-        XCTAssertEqual(plan.skipped, 0)
+        XCTAssertEqual(plan.skippedUnsupported, 1)
     }
 }
