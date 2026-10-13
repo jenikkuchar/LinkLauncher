@@ -23,6 +23,7 @@ struct ManagerView: View {
             table
         }
         .frame(minWidth: 760, minHeight: 420)
+        .environment(\.tagColors, store.tagColors)
         .sheet(item: $state.editorRequest) { request in
             LinkEditorView(mode: request.mode, store: store, favicons: favicons) {
                 state.editorRequest = nil
@@ -78,12 +79,31 @@ struct ManagerView: View {
             }
             Section("Štítky") {
                 ForEach(tagCounts, id: \.tag) { item in
-                    Label(item.tag, systemImage: "tag")
+                    let color = store.tagColor(for: item.tag)
+                    Label {
+                        Text(item.tag)
+                    } icon: {
+                        Image(systemName: color == nil ? "tag" : "tag.fill")
+                            .foregroundStyle(color?.color ?? Color.secondary)
+                    }
                         .badge(item.count)
                         .tag(SidebarItem.tag(item.tag))
                         .contextMenu {
                             Button("Přejmenovat…") { tagSheet = .rename(item.tag) }
                             Button("Sloučit do…") { tagSheet = .merge(item.tag) }
+                            Menu("Barva") {
+                                Toggle("Bez barvy", isOn: Binding(
+                                    get: { color == nil },
+                                    set: { if $0 { store.setTagColor(nil, for: item.tag) } }
+                                ))
+                                Divider()
+                                ForEach(TagColor.allCases) { option in
+                                    Toggle(option.label, isOn: Binding(
+                                        get: { color == option },
+                                        set: { if $0 { store.setTagColor(option, for: item.tag) } }
+                                    ))
+                                }
+                            }
                             Divider()
                             Button("Smazat štítek…", role: .destructive) { tagToDelete = item.tag }
                         }

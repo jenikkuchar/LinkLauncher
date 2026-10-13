@@ -125,6 +125,11 @@ načíst, aplikace ho nepřepíše, vytvoří zálohu `links.broken-*.json` a zo
 }
 ```
 
+Volitelné pole `"tagColors" : { "práce" : "blue" }` určuje barvy štítků (red, orange,
+yellow, green, mint, teal, blue, indigo, purple, pink, brown, gray). Nastavují se
+v Nastavení → Barvy štítků nebo v kontextové nabídce štítku ve správě odkazů a zobrazují
+se jednotně v launcheru i ve správě.
+
 Štítky se ukládají malými písmeny bez mezer (mezera → `-`). Favicony se cachují
 v `~/Library/Caches/LinkLauncher/favicons`.
 

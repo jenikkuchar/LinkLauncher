@@ -5,6 +5,8 @@ import Combine
 @MainActor
 final class LinkStore: ObservableObject {
     @Published private(set) var links: [Link] = []
+    /// Barvy štítků: štítek → název barvy (`TagColor.rawValue`).
+    @Published private(set) var tagColors: [String: String] = [:]
     /// Chyba při čtení/zápisu souboru (zobrazuje se uživateli).
     @Published private(set) var fileError: String?
 
@@ -56,6 +58,7 @@ final class LinkStore: ObservableObject {
             isFileBroken = false
             fileError = nil
             if db.links != links { links = db.links }
+            if db.tagColors != tagColors { tagColors = db.tagColors }
         } catch {
             isFileBroken = true
             let backup = makeBackup(of: data)
@@ -69,7 +72,7 @@ final class LinkStore: ObservableObject {
     func save() {
         guard !isFileBroken else { return }
         do {
-            let data = try LinkDatabaseCodec.encode(LinkDatabase(links: links))
+            let data = try LinkDatabaseCodec.encode(database)
             guard data != lastKnownData else { return }
             try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
             try data.write(to: fileURL, options: .atomic)
@@ -168,8 +171,15 @@ final class LinkStore: ObservableObject {
         save()
     }
 
-    func replaceAll(with newLinks: [Link]) {
-        links = newLinks
+    /// Aktuální obsah (např. pro export zálohy).
+    var database: LinkDatabase {
+        LinkDatabase(links: links, tagColors: tagColors)
+    }
+
+    /// Nahradí vše obsahem zálohy (odkazy i barvy štítků).
+    func replaceAll(with database: LinkDatabase) {
+        links = database.links
+        tagColors = database.tagColors
         save()
     }
 
@@ -190,17 +200,48 @@ final class LinkStore: ObservableObject {
 
     // MARK: - Štítky
 
+    func tagColor(for tag: String) -> TagColor? {
+        tagColors.tagColor(for: tag)
+    }
+
+    /// Nastaví barvu štítku (`nil` = bez barvy).
+    func setTagColor(_ color: TagColor?, for tag: String) {
+        let tag = Tag.normalize(tag)
+        guard !tag.isEmpty, tagColors[tag] != color?.rawValue else { return }
+        tagColors[tag] = color?.rawValue
+        save()
+    }
+
+    /// Doplní barvy ze zálohy u štítků, které ještě barvu nemají.
+    func mergeTagColors(_ colors: [String: String]) {
+        var merged = tagColors
+        for (tag, color) in colors where merged[tag] == nil { merged[tag] = color }
+        guard merged != tagColors else { return }
+        tagColors = merged
+        save()
+    }
+
     func renameTag(_ old: String, to new: String) {
         let newTag = Tag.normalize(new)
         guard !newTag.isEmpty, newTag != old else { return }
+        // Barva přechází na nový název (u sloučení zůstává barva cílového štítku).
+        if let color = tagColors[old] {
+            var colors = tagColors
+            colors[old] = nil
+            if colors[newTag] == nil { colors[newTag] = color }
+            tagColors = colors
+        }
         mutateTags { tags in
             guard let i = tags.firstIndex(of: old) else { return }
             tags[i] = newTag
         }
+        save()
     }
 
     func deleteTag(_ tag: String) {
+        if tagColors[tag] != nil { tagColors[tag] = nil }
         mutateTags { $0.removeAll { $0 == tag } }
+        save()
     }
 
     /// Sloučí štítek `source` do `target` (source zmizí).

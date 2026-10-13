@@ -44,6 +44,30 @@ struct SettingsView: View {
                 }
             }
 
+            Section("Barvy štítků") {
+                let tags = store.tagCounts
+                if tags.isEmpty {
+                    Text("Zatím žádné štítky.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ScrollView {
+                        VStack(spacing: 6) {
+                            ForEach(tags, id: \.tag) { item in
+                                TagColorRow(
+                                    tag: item.tag,
+                                    count: item.count,
+                                    selected: store.tagColor(for: item.tag)
+                                ) { color in
+                                    store.setTagColor(color, for: item.tag)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
+                    .frame(height: min(CGFloat(tags.count) * 30 + 4, 240))
+                }
+            }
+
             Section("Systém") {
                 Toggle("Spouštět po přihlášení", isOn: Binding(
                     get: { launchAtLogin },
@@ -86,6 +110,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .environment(\.tagColors, store.tagColors)
         .frame(width: 520)
         .fixedSize(horizontal: false, vertical: true)
         .onAppear {
@@ -116,7 +141,7 @@ struct SettingsView: View {
         panel.nameFieldStringValue = "LinkLauncher-zaloha-\(date).json"
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
-            let data = try LinkDatabaseCodec.encode(LinkDatabase(links: store.links))
+            let data = try LinkDatabaseCodec.encode(store.database)
             try data.write(to: url, options: .atomic)
             message = "Exportováno: \(linksCountText(store.links.count))."
         } catch {
@@ -147,9 +172,10 @@ struct SettingsView: View {
         switch alert.runModal() {
         case .alertFirstButtonReturn:
             let result = store.merge(database.links)
+            store.mergeTagColors(database.tagColors)
             message = "Přidáno: \(result.added), přeskočeno: \(result.skipped)."
         case .alertSecondButtonReturn:
-            store.replaceAll(with: database.links)
+            store.replaceAll(with: database)
             message = "Odkazy nahrazeny zálohou (\(linksCountText(database.links.count)))."
         default:
             break

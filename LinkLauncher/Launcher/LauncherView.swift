@@ -31,6 +31,7 @@ struct LauncherView: View {
         }
         .frame(width: LauncherLayout.width)
         .frame(maxHeight: .infinity, alignment: .top)
+        .environment(\.tagColors, model.tagColors)
     }
 
     private var searchBar: some View {
@@ -241,16 +242,30 @@ struct FaviconView: View {
 struct TagChip: View {
     let tag: String
     var inverted = false
+    @Environment(\.tagColors) private var tagColors
 
     var body: some View {
-        Text(tag)
-            .font(.system(size: 11, weight: .medium))
-            .lineLimit(1)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 2)
-            .background(
-                Capsule().fill(inverted ? Color.white.opacity(0.25) : Color.secondary.opacity(0.15))
+        let color = tagColors.tagColor(for: tag)?.color
+        HStack(spacing: 4) {
+            if let color {
+                Circle()
+                    .fill(color)
+                    .frame(width: 6, height: 6)
+                    .overlay(Circle().strokeBorder(Color.white.opacity(inverted ? 0.7 : 0), lineWidth: 0.5))
+            }
+            Text(tag)
+                .font(.system(size: 11, weight: .medium))
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 7)
+        .padding(.vertical, 2)
+        .background(
+            Capsule().fill(
+                inverted
+                    ? Color.white.opacity(0.25)
+                    : (color?.opacity(0.2) ?? Color.secondary.opacity(0.15))
             )
+        )
     }
 }
 
@@ -335,11 +350,14 @@ struct WindowDragArea: NSViewRepresentable {
 struct ActiveTagToken: View {
     let tag: String
     let onRemove: () -> Void
+    @Environment(\.tagColors) private var tagColors
 
     var body: some View {
+        let tint = tagColors.tagColor(for: tag)?.color ?? Color.accentColor
         HStack(spacing: 4) {
             Image(systemName: "tag.fill")
                 .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(tint)
             Text(tag)
                 .font(.system(size: 13, weight: .semibold))
                 .lineLimit(1)
@@ -353,8 +371,8 @@ struct ActiveTagToken: View {
         .foregroundStyle(Color.primary)
         .padding(.horizontal, 9)
         .padding(.vertical, 4)
-        .liquidGlass(in: Capsule(), tint: Color.accentColor.opacity(0.25), fallback: Color.accentColor.opacity(0.2))
-        .overlay(Capsule().strokeBorder(Color.accentColor.opacity(0.5), lineWidth: 1))
+        .liquidGlass(in: Capsule(), tint: tint.opacity(0.25), fallback: tint.opacity(0.2))
+        .overlay(Capsule().strokeBorder(tint.opacity(0.5), lineWidth: 1))
         .fixedSize()
     }
 }
@@ -365,12 +383,17 @@ struct TagBubble: View {
     let tag: String
     let count: Int
     let isHighlighted: Bool
+    @Environment(\.tagColors) private var tagColors
 
     var body: some View {
+        let tagColor = tagColors.tagColor(for: tag)?.color
         HStack(spacing: 6) {
             Image(systemName: "tag.fill")
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(isHighlighted ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(HierarchicalShapeStyle.secondary))
+                .foregroundStyle(
+                    tagColor.map { AnyShapeStyle($0) }
+                        ?? (isHighlighted ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(HierarchicalShapeStyle.secondary))
+                )
             Text(tag)
                 .font(.system(size: 13, weight: isHighlighted ? .semibold : .medium))
                 .lineLimit(1)

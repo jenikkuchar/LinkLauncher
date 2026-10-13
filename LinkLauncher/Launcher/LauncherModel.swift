@@ -38,6 +38,8 @@ final class LauncherModel: ObservableObject {
     /// Zvyšuje se při každém zobrazení – pole si podle něj vezme fokus.
     @Published private(set) var focusToken = 0
     @Published private(set) var flashMessage: String?
+    /// Barvy štítků (kopie z úložiště pro zobrazení).
+    @Published private(set) var tagColors: [String: String] = [:]
 
     var onOpen: ((Link) -> Void)?
     var onEdit: ((Link) -> Void)?
@@ -56,6 +58,10 @@ final class LauncherModel: ObservableObject {
     init(store: LinkStore) {
         self.store = store
         engine = SearchEngine(links: store.links)
+        tagColors = store.tagColors
+        store.$tagColors
+            .sink { [weak self] colors in self?.tagColors = colors }
+            .store(in: &cancellables)
         store.$links
             .dropFirst()
             .sink { [weak self] _ in

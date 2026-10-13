@@ -68,18 +68,37 @@ struct LinkDatabase: Codable, Equatable {
 
     var version: Int
     var links: [Link]
+    /// Barvy štítků: název štítku → název barvy (`TagColor.rawValue`).
+    var tagColors: [String: String]
 
-    init(version: Int = LinkDatabase.currentVersion, links: [Link]) {
+    init(version: Int = LinkDatabase.currentVersion, links: [Link], tagColors: [String: String] = [:]) {
         self.version = version
         self.links = links
+        self.tagColors = tagColors
     }
 
-    private enum CodingKeys: String, CodingKey { case version, links }
+    private enum CodingKeys: String, CodingKey { case version, links, tagColors }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         version = try c.decodeIfPresent(Int.self, forKey: .version) ?? LinkDatabase.currentVersion
         links = try c.decodeIfPresent([Link].self, forKey: .links) ?? []
+        let rawColors = try c.decodeIfPresent([String: String].self, forKey: .tagColors) ?? [:]
+        // Klíče normalizovat stejně jako štítky u odkazů (ruční úpravy souboru).
+        var colors: [String: String] = [:]
+        for (tag, color) in rawColors {
+            let normalized = Tag.normalize(tag)
+            if !normalized.isEmpty { colors[normalized] = color }
+        }
+        tagColors = colors
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(version, forKey: .version)
+        try c.encode(links, forKey: .links)
+        // Bez barev pole vůbec nezapisovat – soubor zůstane jako dřív.
+        if !tagColors.isEmpty { try c.encode(tagColors, forKey: .tagColors) }
     }
 }
 
