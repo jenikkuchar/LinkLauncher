@@ -18,7 +18,7 @@ final class LinkStore: ObservableObject {
     private var lastBackedUpData: Data?
     private var watcher: DirectoryWatcher?
 
-    static var defaultDirectory: URL {
+    nonisolated static var defaultDirectory: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("LinkLauncher", isDirectory: true)
     }

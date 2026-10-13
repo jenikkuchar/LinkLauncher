@@ -6,6 +6,8 @@ options:
     macOS: "14.0"
   createIntermediateGroups: true
   developmentLanguage: cs
+  # Kompatibilita s Xcode 15
+  projectFormat: xcode15_0
 
 settings:
   base:
