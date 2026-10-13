@@ -51,9 +51,25 @@ záložek Chrome). Při prvním spuštění se zapne spouštění po přihláše
 | Tab | doplnit navrhovaný štítek |
 | Esc, klik mimo, zkratka znovu | zavřít |
 
+Panel jde přesunout tažením za horní lištu (ikonu nebo okraj vedle pole). Pozice se
+nepamatuje – při dalším otevření je launcher opět ve výchozím místě.
+
 **Vyhledávání:** fuzzy přes název (nejvyšší váha), štítky a URL; bez ohledu na velikost
 písmen a diakritiku. `#štítek` filtruje (více štítků = AND), např. `#práce jira`.
 Prázdný dotaz řadí podle frecency (počet otevření × čerstvost).
+
+## Import záložek
+
+Import čte HTML export záložek (formát Netscape Bookmark File), který umí Chrome, Safari,
+Firefox i Edge:
+
+- **Chrome:** Správce záložek (⌥⌘B) → ⋮ → Exportovat záložky
+- **Safari:** Soubor → Exportovat → Záložky…
+- **Firefox:** Spravovat záložky → Import a záloha → Exportovat do HTML
+
+V okně importu soubor vyberte (nebo ho přetáhněte do okna), zaškrtněte složky/odkazy
+a zvolte, zda se názvy složek mají stát štítky (nejbližší složka / celá cesta).
+Duplicitní URL se přeskočí.
 
 ## Data
 
@@ -89,7 +105,7 @@ LinkLauncher/
   Launcher/   NSPanel, SwiftUI view, ovládání klávesnicí
   Search/     fuzzy matching, parser dotazu (#štítky), frecency
   Manager/    okno správy odkazů a štítků, editor
-  Import/     Chrome profily, parser Bookmarks, plán importu, UI
+  Import/     parser HTML exportu záložek, plán importu, UI
   Settings/   nastavení
   Storage/    LinkStore (načítání, ukládání, sledování souboru), JSON kodek
   Services/   načítání titulku stránky, favicony

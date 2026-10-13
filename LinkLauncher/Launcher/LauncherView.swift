@@ -43,6 +43,8 @@ struct LauncherView: View {
         }
         .padding(.horizontal, 18)
         .frame(height: LauncherLayout.searchHeight)
+        // Tažením za lištu (mimo textové pole) jde panel přesunout.
+        .background(WindowDragArea())
     }
 
     private var suggestionBar: some View {
@@ -244,6 +246,22 @@ struct LauncherSearchField: NSViewRepresentable {
             if parent.text != field.stringValue {
                 parent.text = field.stringValue
             }
+        }
+    }
+}
+
+/// Oblast, za kterou jde okno přetáhnout (panel jinak nemá titulek).
+/// Pozice se nepamatuje – při dalším otevření je launcher opět ve výchozím místě.
+struct WindowDragArea: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView { DragView() }
+    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    final class DragView: NSView {
+        override var mouseDownCanMoveWindow: Bool { true }
+        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+        override func mouseDown(with event: NSEvent) {
+            window?.performDrag(with: event)
         }
     }
 }

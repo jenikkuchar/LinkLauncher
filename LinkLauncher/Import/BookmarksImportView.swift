@@ -1,4 +1,6 @@
+import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 enum CheckState {
     case off, mixed, on
@@ -13,11 +15,8 @@ enum CheckState {
 }
 
 @MainActor
-final class ChromeImportModel: ObservableObject {
-    @Published private(set) var profiles: [ChromeProfile] = []
-    @Published var selectedProfileID: String? {
-        didSet { if selectedProfileID != oldValue { loadBookmarks() } }
-    }
+final class BookmarksImportModel: ObservableObject {
+    @Published private(set) var fileURL: URL?
     @Published private(set) var roots: [BookmarkNode] = []
     @Published private(set) var selected = Set<String>()
     @Published var folderTagMode: FolderTagMode = .nearestFolder
@@ -27,36 +26,31 @@ final class ChromeImportModel: ObservableObject {
     /// ID složky → ID všech odkazů v jejím podstromu.
     private var leavesByFolder: [String: [String]] = [:]
 
-    func reloadProfiles() {
-        profiles = ChromeProfileLocator.profiles()
-        if profiles.isEmpty {
-            roots = []
-            errorMessage = "Nenalezen žádný profil Chrome se záložkami v ~/Library/Application Support/Google/Chrome."
-            return
+    func chooseFile() {
+        let panel = NSOpenPanel()
+        panel.title = "Vyberte HTML export záložek"
+        panel.allowedContentTypes = [.html]
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        if let downloads = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first {
+            panel.directoryURL = downloads
         }
-        errorMessage = nil
-        if let current = selectedProfileID, profiles.contains(where: { $0.id == current }) {
-            loadBookmarks()
-        } else {
-            selectedProfileID = profiles.first?.id
-        }
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        load(url)
     }
 
-    private func loadBookmarks() {
+    func load(_ url: URL) {
         selected.removeAll()
         leavesByFolder.removeAll()
-        guard let profile = profiles.first(where: { $0.id == selectedProfileID }) else {
-            roots = []
-            return
-        }
+        fileURL = url
         do {
-            let data = try Data(contentsOf: profile.bookmarksURL)
-            roots = try ChromeBookmarksParser.parse(data: data)
-            errorMessage = roots.isEmpty ? "Profil neobsahuje žádné záložky." : nil
+            let data = try Data(contentsOf: url)
+            roots = try BookmarksHTMLParser.parse(data: data)
+            errorMessage = nil
             for root in roots { indexLeaves(root) }
         } catch {
             roots = []
-            errorMessage = "Záložky se nepodařilo načíst: \(error.localizedDescription)"
+            errorMessage = error.localizedDescription
         }
     }
 
@@ -88,7 +82,7 @@ final class ChromeImportModel: ObservableObject {
     }
 
     func selectAll() {
-        selected = Set(roots.flatMap { leavesByFolder[$0.id] ?? [] })
+        selected = Set(roots.flatMap(\.allBookmarks).map(\.id))
     }
 
     func selectNone() {
@@ -122,31 +116,23 @@ final class ChromeImportModel: ObservableObject {
 }
 
 @MainActor
-struct ChromeImportView: View {
+struct BookmarksImportView: View {
     @ObservedObject var store: LinkStore
     let favicons: FaviconStore
-    @StateObject private var model = ChromeImportModel()
+    @StateObject private var model = BookmarksImportModel()
     @State private var summary: String?
+    @State private var isDropTargeted = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Picker("Profil:", selection: $model.selectedProfileID) {
-                    ForEach(model.profiles) { profile in
-                        Text(profile.displayName == profile.directoryName
-                             ? profile.displayName
-                             : "\(profile.displayName) (\(profile.directoryName))")
-                            .tag(Optional(profile.id))
-                    }
+                Button("Vybrat soubor…") { model.chooseFile() }
+                if let url = model.fileURL {
+                    Label(url.lastPathComponent, systemImage: "doc.text")
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .foregroundStyle(.secondary)
                 }
-                .frame(maxWidth: 360)
-                .disabled(model.profiles.isEmpty)
-                Button {
-                    model.reloadProfiles()
-                } label: {
-                    Image(systemName: "arrow.clockwise")
-                }
-                .help("Znovu načíst profily a záložky")
                 Spacer()
             }
 
@@ -155,20 +141,24 @@ struct ChromeImportView: View {
                     .foregroundStyle(.secondary)
             }
 
-            List(model.roots, children: \.optionalChildren) { node in
-                BookmarkRow(node: node, state: model.state(of: node)) {
-                    model.toggle(node)
+            if model.roots.isEmpty {
+                instructions
+            } else {
+                List(model.roots, children: \.optionalChildren) { node in
+                    BookmarkRow(node: node, state: model.state(of: node)) {
+                        model.toggle(node)
+                    }
                 }
-            }
-            .listStyle(.bordered(alternatesRowBackgrounds: true))
-            .frame(minHeight: 240)
+                .listStyle(.bordered(alternatesRowBackgrounds: true))
+                .frame(minHeight: 240)
 
-            HStack {
-                Button("Vybrat vše") { model.selectAll() }
-                Button("Zrušit výběr") { model.selectNone() }
-                Spacer()
-                Text("Vybráno: \(linksCountText(model.selectedCount))")
-                    .foregroundStyle(.secondary)
+                HStack {
+                    Button("Vybrat vše") { model.selectAll() }
+                    Button("Zrušit výběr") { model.selectNone() }
+                    Spacer()
+                    Text("Vybráno: \(linksCountText(model.selectedCount))")
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Form {
@@ -194,12 +184,40 @@ struct ChromeImportView: View {
         }
         .padding(16)
         .frame(minWidth: 560, minHeight: 520)
-        .onAppear { model.reloadProfiles() }
+        .dropDestination(for: URL.self) { urls, _ in
+            guard let url = urls.first(where: { $0.isFileURL }) else { return false }
+            model.load(url)
+            return true
+        } isTargeted: { isDropTargeted = $0 }
         .alert("Import dokončen", isPresented: Binding(get: { summary != nil }, set: { if !$0 { summary = nil } })) {
             Button("OK") { summary = nil }
         } message: {
             Text(summary ?? "")
         }
+    }
+
+    private var instructions: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "square.and.arrow.down.on.square")
+                .font(.system(size: 36))
+                .foregroundStyle(.secondary)
+            Text("Vyberte nebo sem přetáhněte HTML export záložek")
+                .font(.headline)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Chrome: Záložky a seznamy → Správce záložek (⌥⌘B) → ⋮ → Exportovat záložky")
+                Text("Safari: Soubor → Exportovat → Záložky…")
+                Text("Firefox: Záložky → Spravovat záložky → Import a záloha → Exportovat do HTML")
+            }
+            .font(.callout)
+            .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(minHeight: 240)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(isDropTargeted ? Color.accentColor : Color.secondary.opacity(0.3),
+                              style: StrokeStyle(lineWidth: 2, dash: [6]))
+        )
     }
 }
 
