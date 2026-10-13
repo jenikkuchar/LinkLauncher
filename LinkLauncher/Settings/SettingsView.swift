@@ -10,11 +10,34 @@ struct SettingsView: View {
     @State private var launchAtLogin = LoginItem.isEnabled
     @State private var loginItemNeedsApproval = LoginItem.requiresApproval
     @State private var message: String?
+    @State private var shortcut = KeyboardShortcuts.getShortcut(for: .toggleLauncher)
+
+    private var isDefaultShortcut: Bool {
+        shortcut == KeyboardShortcuts.Name.toggleLauncher.defaultShortcut
+    }
+
+    private var defaultShortcutText: String {
+        KeyboardShortcuts.Name.toggleLauncher.defaultShortcut.map { "\($0)" } ?? ""
+    }
 
     var body: some View {
         Form {
             Section("Launcher") {
-                KeyboardShortcuts.Recorder("Klávesová zkratka:", name: .toggleLauncher)
+                HStack {
+                    KeyboardShortcuts.Recorder("Klávesová zkratka:", name: .toggleLauncher) { newShortcut in
+                        shortcut = newShortcut
+                    }
+                    Button("Obnovit výchozí (\(defaultShortcutText))") {
+                        KeyboardShortcuts.reset(.toggleLauncher)
+                        shortcut = KeyboardShortcuts.getShortcut(for: .toggleLauncher)
+                    }
+                    .disabled(isDefaultShortcut)
+                }
+                if shortcut == nil {
+                    Text("Zkratka není nastavená – launcher otevřete z ikony v menu baru.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Section("Systém") {
@@ -61,7 +84,10 @@ struct SettingsView: View {
         .formStyle(.grouped)
         .frame(width: 520)
         .fixedSize(horizontal: false, vertical: true)
-        .onAppear { refreshLoginItem() }
+        .onAppear {
+            refreshLoginItem()
+            shortcut = KeyboardShortcuts.getShortcut(for: .toggleLauncher)
+        }
     }
 
     private func refreshLoginItem() {
