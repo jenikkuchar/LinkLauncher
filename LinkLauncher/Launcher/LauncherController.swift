@@ -178,14 +178,32 @@ final class LauncherController: NSObject, NSWindowDelegate {
             model.moveSelection(by: -LauncherLayout.maxVisibleRows)
             return true
         case kVK_Return, kVK_ANSI_KeypadEnter:
-            model.openSelected()
+            if model.isTagPickerOpen {
+                model.applyHighlightedTag()
+            } else {
+                model.openSelected()
+            }
             return true
         case kVK_Escape:
-            hide()
+            // Esc nejdřív zavře řadu štítků, teprve pak launcher.
+            if model.isTagPickerOpen {
+                model.closeTagPicker()
+            } else {
+                hide()
+            }
             return true
         case kVK_Tab:
-            model.completeTag()
+            model.handleTab(backwards: flags.contains(.shift))
             return true
+        case kVK_LeftArrow where model.isTagPickerOpen:
+            model.movePicker(by: -1)
+            return true
+        case kVK_RightArrow where model.isTagPickerOpen:
+            model.movePicker(by: 1)
+            return true
+        case kVK_Delete where flags.isEmpty:
+            // ⌫ v prázdném poli odebere poslední štítek; jinak běžné mazání textu.
+            return model.removeLastActiveTag()
         default:
             break
         }
