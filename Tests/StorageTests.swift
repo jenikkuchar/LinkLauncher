@@ -27,6 +27,27 @@ final class StorageTests: XCTestCase {
         XCTAssertEqual(decoded.version, 1)
     }
 
+    func testTagColorsRoundTrip() throws {
+        let db = LinkDatabase(links: [Link(title: "A", url: "https://a.example.com", tags: ["práce"])],
+                              tagColors: ["práce": "blue"])
+        let data = try LinkDatabaseCodec.encode(db)
+        XCTAssertTrue(String(decoding: data, as: UTF8.self).contains("\"tagColors\""))
+        let decoded = try LinkDatabaseCodec.decode(data)
+        XCTAssertEqual(decoded.tagColors, ["práce": "blue"])
+        XCTAssertEqual(decoded.tagColors.tagColor(for: "práce"), .blue)
+        XCTAssertNil(["x": "neexistujici"].tagColor(for: "x"))
+
+        // Bez barev se pole nezapisuje vůbec.
+        let plain = try LinkDatabaseCodec.encode(LinkDatabase(links: []))
+        XCTAssertFalse(String(decoding: plain, as: UTF8.self).contains("tagColors"))
+    }
+
+    func testTagColorKeysAreNormalized() throws {
+        let json = ##"{ "links": [], "tagColors": { "#Práce": "green", " ": "red" } }"##
+        let db = try LinkDatabaseCodec.decode(Data(json.utf8))
+        XCTAssertEqual(db.tagColors, ["práce": "green"])
+    }
+
     func testLenientDecodingOfHandEditedFile() throws {
         let json = """
         { "links": [

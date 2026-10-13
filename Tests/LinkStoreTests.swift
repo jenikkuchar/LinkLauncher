@@ -88,6 +88,37 @@ final class LinkStoreTests: XCTestCase {
     }
 
     @MainActor
+    func testTagColorsFollowRenameMergeAndDelete() throws {
+        let store = LinkStore(directory: dir)
+        store.load(createSampleIfMissing: false)
+        store.add([
+            Link(title: "A", url: "https://a.example.com", tags: ["prace"]),
+            Link(title: "B", url: "https://b.example.com", tags: ["doma", "pm"]),
+        ])
+        store.setTagColor(.blue, for: "prace")
+        store.setTagColor(.red, for: "doma")
+        store.setTagColor(.green, for: "pm")
+
+        store.renameTag("prace", to: "práce")
+        XCTAssertEqual(store.tagColor(for: "práce"), .blue)
+        XCTAssertNil(store.tagColor(for: "prace"))
+
+        store.mergeTag("pm", into: "doma") // cílový štítek si barvu ponechá
+        XCTAssertEqual(store.tagColor(for: "doma"), .red)
+        XCTAssertNil(store.tagColor(for: "pm"))
+
+        store.deleteTag("doma")
+        XCTAssertNil(store.tagColor(for: "doma"))
+
+        store.setTagColor(nil, for: "práce")
+        XCTAssertTrue(store.tagColors.isEmpty)
+
+        store.setTagColor(.purple, for: "práce")
+        let saved = try LinkDatabaseCodec.decode(Data(contentsOf: store.fileURL))
+        XCTAssertEqual(saved.tagColors, ["práce": "purple"])
+    }
+
+    @MainActor
     func testRecordOpenAndMerge() {
         let store = LinkStore(directory: dir)
         store.load(createSampleIfMissing: false)
