@@ -20,14 +20,9 @@ final class LauncherController: NSObject, NSWindowDelegate {
         panel = LauncherPanel()
         super.init()
 
-        let background = LauncherPanel.makeBackground()
         let hosting = NSHostingView(rootView: LauncherView(model: model, favicons: favicons))
         hosting.sizingOptions = []
-        hosting.translatesAutoresizingMaskIntoConstraints = true
-        hosting.autoresizingMask = [.width, .height]
-        hosting.frame = background.bounds
-        background.addSubview(hosting)
-        panel.contentView = background
+        panel.contentView = LauncherPanel.makeBackground(content: hosting)
         panel.delegate = self
 
         model.onOpen = { [weak self] link in self?.open(link) }

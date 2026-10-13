@@ -27,13 +27,27 @@ final class LauncherPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 
-    /// Obsah s efektem vibrancy a zaoblenými rohy.
-    static func makeBackground(cornerRadius: CGFloat = 14) -> NSVisualEffectView {
+    /// Pozadí panelu se zaoblenými rohy: na macOS 26 Liquid Glass, jinak vibrancy.
+    static func makeBackground(content: NSView) -> NSView {
+        content.translatesAutoresizingMaskIntoConstraints = true
+        content.autoresizingMask = [.width, .height]
+
+        #if compiler(>=6.2)
+        if #available(macOS 26.0, *) {
+            let glass = NSGlassEffectView()
+            glass.cornerRadius = 22
+            glass.contentView = content
+            return glass
+        }
+        #endif
+
         let effect = NSVisualEffectView()
         effect.material = .popover
         effect.blendingMode = .behindWindow
         effect.state = .active
-        effect.maskImage = roundedMask(radius: cornerRadius)
+        effect.maskImage = roundedMask(radius: 14)
+        content.frame = effect.bounds
+        effect.addSubview(content)
         return effect
     }
 

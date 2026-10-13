@@ -51,6 +51,10 @@ záložek Chrome). Při prvním spuštění se zapne spouštění po přihláše
 | Tab | doplnit navrhovaný štítek |
 | Esc, klik mimo, zkratka znovu | zavřít |
 
+Na macOS 26 Tahoe (při sestavení v Xcode 26) používá launcher Liquid Glass – skleněný
+panel, skleněné zvýraznění vybraného řádku a návrhy štítků. Na starších systémech
+zůstává průsvitné pozadí (vibrancy).
+
 Panel jde přesunout tažením za horní lištu (ikonu nebo okraj vedle pole). Pozice se
 nepamatuje – při dalším otevření je launcher opět ve výchozím místě.
 
