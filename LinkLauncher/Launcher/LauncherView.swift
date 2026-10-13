@@ -44,12 +44,20 @@ struct LauncherView: View {
                 ActiveTagToken(tag: tag) { model.removeActiveTag(tag) }
                     .transition(.scale.combined(with: .opacity))
             }
-            LauncherSearchField(
-                text: $model.query,
-                focusToken: model.focusToken,
-                placeholder: placeholder
-            )
-            .frame(height: 30)
+            LauncherSearchField(text: $model.query, focusToken: model.focusToken)
+                .frame(height: 30)
+                // Placeholder kreslí SwiftUI: NSTextField ho na skle při změně vzhledu
+                // (přesun panelu nad světlé/tmavé pozadí) nepřebarví a zůstane viset.
+                .overlay(alignment: .leading) {
+                    if model.query.isEmpty {
+                        Text(placeholder)
+                            .font(.system(size: 22, weight: .light))
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                            .padding(.leading, 2)
+                            .allowsHitTesting(false)
+                    }
+                }
             if let flash = model.flashMessage {
                 Text(flash)
                     .font(.system(size: 12, weight: .medium))
@@ -273,18 +281,16 @@ struct TagChip: View {
 struct LauncherSearchField: NSViewRepresentable {
     @Binding var text: String
     var focusToken: Int
-    var placeholder = "Hledat odkazy…"
 
     func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
 
     func makeNSView(context: Context) -> NSTextField {
-        let field = NSTextField()
+        let field = AppearanceAwareTextField()
         field.isBordered = false
         field.isBezeled = false
         field.drawsBackground = false
         field.focusRingType = .none
         field.font = .systemFont(ofSize: 22, weight: .light)
-        field.placeholderString = placeholder
         field.lineBreakMode = .byTruncatingTail
         field.cell?.usesSingleLineMode = true
         field.cell?.wraps = false
@@ -295,9 +301,6 @@ struct LauncherSearchField: NSViewRepresentable {
 
     func updateNSView(_ field: NSTextField, context: Context) {
         context.coordinator.parent = self
-        if field.placeholderString != placeholder {
-            field.placeholderString = placeholder
-        }
         if field.stringValue != text {
             field.stringValue = text
             if let editor = field.currentEditor() {
@@ -420,5 +423,15 @@ struct TagBubble: View {
             )
         )
         .fixedSize()
+    }
+}
+
+/// Textové pole, které se při změně vzhledu (sklo nad světlým/tmavým pozadím) překreslí,
+/// aby barva textu nezůstala ze starého vzhledu.
+final class AppearanceAwareTextField: NSTextField {
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        needsDisplay = true
+        currentEditor()?.needsDisplay = true
     }
 }
