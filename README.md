@@ -51,9 +51,31 @@ záložek Chrome). Při prvním spuštění se zapne spouštění po přihláše
 | Tab | doplnit navrhovaný štítek |
 | Esc, klik mimo, zkratka znovu | zavřít |
 
+Panel jde přesunout tažením za horní lištu (ikonu nebo okraj vedle pole). Pozice se
+nepamatuje – při dalším otevření je launcher opět ve výchozím místě.
+
 **Vyhledávání:** fuzzy přes název (nejvyšší váha), štítky a URL; bez ohledu na velikost
 písmen a diakritiku. `#štítek` filtruje (více štítků = AND), např. `#práce jira`.
 Prázdný dotaz řadí podle frecency (počet otevření × čerstvost).
+
+## Import záložek
+
+Okno importu (menu bar → Importovat záložky…) má dva zdroje:
+
+**Profil Chrome** – načte záložky přímo z profilu v `~/Library/Application Support/Google/Chrome/`
+(výběr profilu, jména z `Local State`). macOS se může zeptat na přístup k datům jiných
+aplikací – povolte ho v Nastavení systému → Soukromí a zabezpečení.
+
+**HTML soubor** – export záložek (formát Netscape Bookmark File) z Chrome, Safari,
+Firefoxu nebo Edge:
+
+- **Chrome:** Správce záložek (⌥⌘B) → ⋮ → Exportovat záložky
+- **Safari:** Soubor → Exportovat → Záložky…
+- **Firefox:** Spravovat záložky → Import a záloha → Exportovat do HTML
+
+V okně importu soubor vyberte (nebo ho přetáhněte do okna), zaškrtněte složky/odkazy
+a zvolte, zda se názvy složek mají stát štítky (nejbližší složka / celá cesta).
+Duplicitní URL se přeskočí.
 
 ## Data
 
@@ -89,7 +111,7 @@ LinkLauncher/
   Launcher/   NSPanel, SwiftUI view, ovládání klávesnicí
   Search/     fuzzy matching, parser dotazu (#štítky), frecency
   Manager/    okno správy odkazů a štítků, editor
-  Import/     Chrome profily, parser Bookmarks, plán importu, UI
+  Import/     Chrome profily a parser Bookmarks, parser HTML exportu, plán importu, UI
   Settings/   nastavení
   Storage/    LinkStore (načítání, ukládání, sledování souboru), JSON kodek
   Services/   načítání titulku stránky, favicony

@@ -1,25 +1,5 @@
 import Foundation
 
-/// Uzel stromu záložek Chrome (složka nebo odkaz).
-struct BookmarkNode: Identifiable, Hashable {
-    let id: String
-    let name: String
-    /// `nil` pro složky.
-    let url: String?
-    let children: [BookmarkNode]
-    /// Kořenová složka (Panel záložek, Ostatní záložky, …) – její název se nepoužívá jako štítek.
-    let isRoot: Bool
-
-    var isFolder: Bool { url == nil }
-    /// Pro `OutlineGroup` – odkazy nemají potomky.
-    var optionalChildren: [BookmarkNode]? { isFolder ? children : nil }
-
-    /// Všechny odkazy (listy) v podstromu.
-    var allBookmarks: [BookmarkNode] {
-        isFolder ? children.flatMap(\.allBookmarks) : [self]
-    }
-}
-
 enum ChromeBookmarksError: LocalizedError {
     case invalidFormat
 

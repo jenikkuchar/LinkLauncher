@@ -14,7 +14,8 @@ final class LauncherPanel: NSPanel {
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient, .ignoresCycle]
         hidesOnDeactivate = false
         becomesKeyOnlyIfNeeded = false
-        isMovable = false
+        // Přesouvá se tažením za lištu s vyhledáváním (`WindowDragArea`), ne za celé pozadí.
+        isMovable = true
         isMovableByWindowBackground = false
         isOpaque = false
         backgroundColor = .clear

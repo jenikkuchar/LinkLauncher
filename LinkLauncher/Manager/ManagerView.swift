@@ -207,9 +207,9 @@ struct ManagerView: View {
             .help("Smazat vybrané odkazy")
 
             Button(action: onImport) {
-                Label("Importovat z Chrome", systemImage: "square.and.arrow.down")
+                Label("Importovat záložky", systemImage: "square.and.arrow.down")
             }
-            .help("Importovat záložky z Chrome")
+            .help("Importovat záložky z HTML exportu (Chrome, Safari, Firefox)")
         }
     }
 

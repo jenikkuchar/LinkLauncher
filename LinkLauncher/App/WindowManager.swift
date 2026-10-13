@@ -50,11 +50,11 @@ final class WindowManager: NSObject {
             window = existing
         } else {
             window = makeWindow(
-                title: "Import z Chrome",
+                title: "Import záložek",
                 size: NSSize(width: 640, height: 600),
                 autosaveName: "LinkLauncher.Import",
                 resizable: true,
-                rootView: ChromeImportView(store: store, favicons: favicons)
+                rootView: BookmarksImportView(store: store, favicons: favicons)
             )
             importWindow = window
         }
