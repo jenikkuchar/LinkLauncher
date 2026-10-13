@@ -78,7 +78,7 @@ struct TagSheetView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         case .addToSelection:
-            Text("Přidat štítek k \(linksCountText(selection.count))").font(.headline)
+            Text("Nový štítek pro \(linksCountText(selection.count))").font(.headline)
             TextField("Štítek", text: $text)
                 .textFieldStyle(.roundedBorder)
             let suggestions = store.allTags.filter {

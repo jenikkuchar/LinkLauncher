@@ -17,6 +17,7 @@ enum CheckState {
 enum ImportSource: String, CaseIterable, Identifiable {
     case chromeProfile
     case htmlFile
+    case text
 
     var id: String { rawValue }
 
@@ -24,6 +25,7 @@ enum ImportSource: String, CaseIterable, Identifiable {
         switch self {
         case .chromeProfile: return "Profil Chrome"
         case .htmlFile: return "HTML soubor"
+        case .text: return "Text"
         }
     }
 }
@@ -43,6 +45,12 @@ final class BookmarksImportModel: ObservableObject {
     @Published var folderTagMode: FolderTagMode = .nearestFolder
     @Published var extraTag = ""
     @Published var errorMessage: String?
+    /// Vložený text s odkazy (zdroj „Text“) – parsuje se při každé změně.
+    @Published var plainText = "" {
+        didSet { if plainText != oldValue, source == .text { parseText() } }
+    }
+    /// Neprázdné řádky textu, ve kterých nebyla nalezena URL.
+    @Published private(set) var skippedTextLines = 0
 
     /// ID složky → ID všech odkazů v jejím podstromu.
     private var leavesByFolder: [String: [String]] = [:]
@@ -59,6 +67,8 @@ final class BookmarksImportModel: ObservableObject {
                 setRoots([])
                 errorMessage = nil
             }
+        case .text:
+            parseText()
         }
     }
 
@@ -127,6 +137,49 @@ final class BookmarksImportModel: ObservableObject {
         }
     }
 
+    // MARK: Text
+
+    private func parseText() {
+        let result = PlainTextBookmarksParser.parse(plainText)
+        setRoots(result.roots)
+        skippedTextLines = result.skippedLines
+        errorMessage = nil
+        // Vložené odkazy chce uživatel typicky všechny – předvybrat.
+        selectAll()
+    }
+
+    func chooseTextFile() {
+        let panel = NSOpenPanel()
+        panel.title = "Vyberte textový soubor s odkazy"
+        var types: [UTType] = [.plainText]
+        if let markdown = UTType(filenameExtension: "md") { types.append(markdown) }
+        panel.allowedContentTypes = types
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        loadText(url)
+    }
+
+    func loadText(_ url: URL) {
+        guard let data = try? Data(contentsOf: url),
+              let text = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1) else {
+            errorMessage = BookmarksImportError.unreadable.localizedDescription
+            return
+        }
+        if source != .text { source = .text }
+        plainText = text
+        parseText()
+    }
+
+    /// Přetažený soubor: HTML export → HTML zdroj, ostatní → text.
+    func loadDropped(_ url: URL) {
+        if ["html", "htm"].contains(url.pathExtension.lowercased()) {
+            loadHTML(url)
+        } else {
+            loadText(url)
+        }
+    }
+
     // MARK: Výběr
 
     private func setRoots(_ newRoots: [BookmarkNode]) {
@@ -186,6 +239,7 @@ final class BookmarksImportModel: ObservableObject {
         )
         store.add(plan.links)
         favicons.prefetch(plan.links.map(\.url))
+        fetchMissingTitles(plan.links, store: store)
         selected.removeAll()
 
         var summary = "Přidáno: \(plan.links.count), přeskočeno: \(plan.skipped)"
@@ -194,6 +248,19 @@ final class BookmarksImportModel: ObservableObject {
         if plan.skippedUnsupported > 0 { details.append("nepodporované adresy: \(plan.skippedUnsupported)") }
         if !details.isEmpty { summary += " (\(details.joined(separator: ", ")))" }
         return summary
+    }
+
+    /// Odkazům bez názvu (typicky z textu) postupně načte `<title>` ze stránky.
+    private func fetchMissingTitles(_ links: [Link], store: LinkStore) {
+        let untitled = links.filter { $0.title.isEmpty }.prefix(100)
+        guard !untitled.isEmpty else { return }
+        Task { [store] in
+            for link in untitled {
+                if let title = await TitleFetcher.fetchTitle(for: link.url) {
+                    store.setFetchedTitle(title, for: link.id, ifCurrentTitle: "")
+                }
+            }
+        }
     }
 }
 
@@ -245,6 +312,8 @@ struct BookmarksImportView: View {
                     }
                     Spacer()
                 }
+            case .text:
+                textInput
             }
 
             if let error = model.errorMessage {
@@ -253,10 +322,10 @@ struct BookmarksImportView: View {
             }
 
             if model.roots.isEmpty {
-                if model.source == .htmlFile {
-                    instructions
-                } else {
-                    Spacer(minLength: 240)
+                switch model.source {
+                case .htmlFile: instructions
+                case .chromeProfile: Spacer(minLength: 240)
+                case .text: Spacer(minLength: 120)
                 }
             } else {
                 List(model.roots, children: \.optionalChildren) { node in
@@ -265,7 +334,7 @@ struct BookmarksImportView: View {
                     }
                 }
                 .listStyle(.bordered(alternatesRowBackgrounds: true))
-                .frame(minHeight: 240)
+                .frame(minHeight: model.source == .text ? 160 : 240)
 
                 HStack {
                     Button("Vybrat vše") { model.selectAll() }
@@ -302,7 +371,7 @@ struct BookmarksImportView: View {
         .onAppear { model.reloadSource() }
         .dropDestination(for: URL.self) { urls, _ in
             guard let url = urls.first(where: { $0.isFileURL }) else { return false }
-            model.loadHTML(url)
+            model.loadDropped(url)
             return true
         } isTargeted: { isDropTargeted = $0 }
         .alert("Import dokončen", isPresented: Binding(get: { summary != nil }, set: { if !$0 { summary = nil } })) {
@@ -311,6 +380,48 @@ struct BookmarksImportView: View {
             Text(summary ?? "")
         }
     }
+
+    private var textInput: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("Jeden odkaz na řádek, štítky jako #štítek.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("Načíst ze souboru…") { model.chooseTextFile() }
+            }
+            TextEditor(text: $model.plainText)
+                .font(.system(.body, design: .monospaced))
+                .frame(minHeight: 130)
+                .scrollContentBackground(.hidden)
+                .padding(4)
+                .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .textBackgroundColor)))
+                .overlay(alignment: .topLeading) {
+                    if model.plainText.isEmpty {
+                        Text(Self.textPlaceholder)
+                            .font(.system(.body, design: .monospaced))
+                            .foregroundStyle(.tertiary)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 4)
+                            .allowsHitTesting(false)
+                    }
+                }
+                .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.secondary.opacity(0.3)))
+            if model.skippedTextLines > 0 {
+                Text("Řádky bez URL (přeskočí se): \(model.skippedTextLines)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private static let textPlaceholder = """
+    https://jira.example.com Jira #práce #pm
+    Wiki | https://wiki.example.com | práce, dokumentace
+    - [GitHub](https://github.com) #vývoj
+    # Doma            ← nadpis = složka
+    https://example.com/recepty Recepty
+    """
 
     private var instructions: some View {
         VStack(spacing: 12) {

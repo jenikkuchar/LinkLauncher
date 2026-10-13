@@ -239,25 +239,43 @@ struct ManagerView: View {
         }
     }
 
+    /// Všechny existující štítky s fajfkou u přiřazených; kliknutí štítek přidá/odebere.
+    /// U více odkazů, kde štítek má jen část, je uveden počet a kliknutí ho přidá všem.
     private func tagMenu(for ids: Set<Link.ID>) -> some View {
-        let tagsInSelection = Array(Set(store.links.filter { ids.contains($0.id) }.flatMap(\.tags)))
-            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+        let selectedLinks = store.links.filter { ids.contains($0.id) }
+        let allTags = store.allTags
         return Menu {
-            Button("Přidat štítek…") {
-                selection = ids
-                tagSheet = .addToSelection
-            }
-            if !tagsInSelection.isEmpty {
-                Menu("Odebrat štítek") {
-                    ForEach(tagsInSelection, id: \.self) { tag in
-                        Button(tag) { store.removeTag(tag, from: ids) }
+            ForEach(allTags, id: \.self) { tag in
+                let count = selectedLinks.filter { $0.tags.contains(tag) }.count
+                let isOn = !selectedLinks.isEmpty && count == selectedLinks.count
+                Toggle(isOn: Binding(
+                    get: { isOn },
+                    set: { newValue in
+                        if newValue {
+                            store.addTag(tag, to: ids)
+                        } else {
+                            store.removeTag(tag, from: ids)
+                        }
+                    }
+                )) {
+                    if count > 0 && !isOn {
+                        Text("\(tag)  (\(count) z \(selectedLinks.count))")
+                    } else {
+                        Text(tag)
                     }
                 }
+            }
+            if !allTags.isEmpty {
+                Divider()
+            }
+            Button("Nový štítek…") {
+                selection = ids
+                tagSheet = .addToSelection
             }
         } label: {
             Label("Štítky", systemImage: "tag")
         }
-        .help("Hromadně přidat nebo odebrat štítek")
+        .help("Přiřadit nebo odebrat štítky vybraným odkazům")
     }
 }
 
