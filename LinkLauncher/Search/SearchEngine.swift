@@ -12,7 +12,7 @@ struct SearchEngine {
         let url: [Unicode.Scalar]
         let tags: [[Unicode.Scalar]]
         let foldedTags: Set<String>
-        /// Klíč pro abecední řazení při shodném skóre i frecency.
+        /// Klíč pro abecední řazení při shodném skóre i počtu otevření.
         let sortKey: String
     }
 
@@ -44,7 +44,7 @@ struct SearchEngine {
 
     func search(_ query: ParsedQuery, now: Date = Date(), limit: Int? = nil) -> [Link] {
         let terms = query.terms.map { Array($0.unicodeScalars) }
-        var scored: [(index: Int, score: Double, frecency: Double)] = []
+        var scored: [(index: Int, score: Double)] = []
         scored.reserveCapacity(entries.count)
 
         for (index, entry) in entries.enumerated() {
@@ -66,13 +66,17 @@ struct SearchEngine {
                 total += s
             }
             guard matchedAll else { continue }
-            scored.append((index, total.rounded(), Frecency.score(entry.link, now: now)))
+            scored.append((index, total.rounded()))
         }
 
         let entries = self.entries
         scored.sort { a, b in
             if a.score != b.score { return a.score > b.score }
-            if a.frecency != b.frecency { return a.frecency > b.frecency }
+            // Nejčastěji otevírané první, při shodě naposledy otevřené.
+            let la = entries[a.index].link, lb = entries[b.index].link
+            if la.openCount != lb.openCount { return la.openCount > lb.openCount }
+            let da = la.lastOpenedAt ?? .distantPast, db = lb.lastOpenedAt ?? .distantPast
+            if da != db { return da > db }
             let ka = entries[a.index].sortKey, kb = entries[b.index].sortKey
             if ka != kb { return ka < kb }
             return a.index < b.index

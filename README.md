@@ -56,7 +56,8 @@ nepamatuje – při dalším otevření je launcher opět ve výchozím místě.
 
 **Vyhledávání:** fuzzy přes název (nejvyšší váha), štítky a URL; bez ohledu na velikost
 písmen a diakritiku. `#štítek` filtruje (více štítků = AND), např. `#práce jira`.
-Prázdný dotaz řadí podle frecency (počet otevření × čerstvost).
+Odkazy jsou seřazené od nejčastěji otevíraných (při shodě naposledy otevřené první);
+při hledání má přednost kvalita shody.
 
 ## Import záložek
 
@@ -109,7 +110,7 @@ v `~/Library/Caches/LinkLauncher/favicons`.
 LinkLauncher/
   App/        vstupní bod, AppDelegate, menu bar, okna, zkratka, login item
   Launcher/   NSPanel, SwiftUI view, ovládání klávesnicí
-  Search/     fuzzy matching, parser dotazu (#štítky), frecency
+  Search/     fuzzy matching, parser dotazu (#štítky), řazení
   Manager/    okno správy odkazů a štítků, editor
   Import/     Chrome profily a parser Bookmarks, parser HTML exportu, plán importu, UI
   Settings/   nastavení

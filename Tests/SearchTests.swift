@@ -89,10 +89,10 @@ final class SearchTests: XCTestCase {
         XCTAssertEqual(engine.search("abc", now: now).map(\.title), ["Abc dokumentace", "Xabc", "a-b-c"])
     }
 
-    func testEqualScoreSortedByFrecency() {
+    func testEqualScoreSortedByOpenCount() {
         let engine = SearchEngine(links: [
-            link("Docs", "https://a.example.com", opened: 1, daysAgo: 60),
-            link("Docs", "https://b.example.com", opened: 5, daysAgo: 1),
+            link("Docs", "https://a.example.com", opened: 1, daysAgo: 1),
+            link("Docs", "https://b.example.com", opened: 5, daysAgo: 60),
             link("Docs", "https://c.example.com"),
         ])
         XCTAssertEqual(engine.search("docs", now: now).map(\.url), [
@@ -100,21 +100,29 @@ final class SearchTests: XCTestCase {
         ])
     }
 
-    func testEmptyQuerySortedByFrecency() {
+    func testEmptyQuerySortedByOpenCount() {
         let engine = SearchEngine(links: [
             link("Nikdy", "https://a.example.com"),
             link("Často dávno", "https://b.example.com", opened: 20, daysAgo: 120),
             link("Včera", "https://c.example.com", opened: 3, daysAgo: 1),
         ])
-        XCTAssertEqual(engine.search("", now: now).map(\.title), ["Včera", "Často dávno", "Nikdy"])
+        XCTAssertEqual(engine.search("", now: now).map(\.title), ["Často dávno", "Včera", "Nikdy"])
     }
 
-    func testFrecencyPrefersRecent() {
-        XCTAssertGreaterThan(
-            Frecency.score(openCount: 2, lastOpenedAt: now, now: now),
-            Frecency.score(openCount: 2, lastOpenedAt: now.addingTimeInterval(-86_400 * 30), now: now)
-        )
-        XCTAssertEqual(Frecency.score(openCount: 0, lastOpenedAt: nil, now: now), 0)
+    func testSameOpenCountPrefersRecentlyOpened() {
+        let engine = SearchEngine(links: [
+            link("Dávno", "https://a.example.com", opened: 2, daysAgo: 30),
+            link("Nedávno", "https://b.example.com", opened: 2, daysAgo: 1),
+        ])
+        XCTAssertEqual(engine.search("", now: now).map(\.title), ["Nedávno", "Dávno"])
+    }
+
+    func testMatchScoreStillBeatsOpenCount() {
+        let engine = SearchEngine(links: [
+            link("Moje Jira", "https://a.example.com", opened: 50, daysAgo: 1),
+            link("Jira", "https://b.example.com"),
+        ])
+        XCTAssertEqual(engine.search("jira", now: now).first?.title, "Jira")
     }
 
     // MARK: #štítky
