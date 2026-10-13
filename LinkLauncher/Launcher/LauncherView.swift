@@ -10,13 +10,18 @@ struct LauncherView: View {
     var body: some View {
         VStack(spacing: 0) {
             searchBar
-            if !model.tagSuggestions.isEmpty {
+            if model.isTagPickerOpen {
+                tagPicker
+            } else if !model.tagSuggestions.isEmpty {
                 suggestionBar
             }
             if !model.results.isEmpty {
                 Divider()
                 resultsList
-            } else if !model.query.isEmpty {
+            } else if model.isTagPickerOpen {
+                Divider()
+                emptyState("Žádný štítek neodpovídá · Esc zavře výběr")
+            } else if !model.query.isEmpty || !model.activeTags.isEmpty {
                 Divider()
                 emptyState("Nic nenalezeno · ⌘N přidá nový odkaz")
             } else {
@@ -30,11 +35,20 @@ struct LauncherView: View {
 
     private var searchBar: some View {
         HStack(spacing: 12) {
-            Image(systemName: "link")
+            Image(systemName: model.isTagPickerOpen ? "tag" : "link")
                 .font(.system(size: 20, weight: .medium))
                 .foregroundStyle(.secondary)
-            LauncherSearchField(text: $model.query, focusToken: model.focusToken)
-                .frame(height: 30)
+                .contentTransition(.symbolEffect(.replace))
+            ForEach(model.activeTags, id: \.self) { tag in
+                ActiveTagToken(tag: tag) { model.removeActiveTag(tag) }
+                    .transition(.scale.combined(with: .opacity))
+            }
+            LauncherSearchField(
+                text: $model.query,
+                focusToken: model.focusToken,
+                placeholder: placeholder
+            )
+            .frame(height: 30)
             if let flash = model.flashMessage {
                 Text(flash)
                     .font(.system(size: 12, weight: .medium))
@@ -44,8 +58,45 @@ struct LauncherView: View {
         }
         .padding(.horizontal, 18)
         .frame(height: LauncherLayout.searchHeight)
+        .animation(.snappy(duration: 0.2), value: model.activeTags)
         // Tažením za lištu (mimo textové pole) jde panel přesunout.
         .background(WindowDragArea())
+    }
+
+    private var placeholder: String {
+        if model.isTagPickerOpen { return "Filtrovat štítky…" }
+        if let last = model.activeTags.last {
+            return model.activeTags.count == 1 ? "Hledat v #\(last)…" : "Hledat ve vybraných štítcích…"
+        }
+        return "Hledat odkazy…   (Tab = štítky)"
+    }
+
+    /// Řada „bublin“ se štítky (Tab), podobně jako výběr kategorie ve Spotlightu.
+    private var tagPicker: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(Array(model.pickerTags.enumerated()), id: \.element.id) { index, item in
+                        TagBubble(
+                            tag: item.tag,
+                            count: item.count,
+                            isHighlighted: index == model.pickerIndex
+                        )
+                        .id(item.tag)
+                        .onTapGesture { model.applyTag(item.tag) }
+                    }
+                }
+                .padding(.horizontal, 18)
+                .padding(.vertical, 6)
+            }
+            .frame(height: LauncherLayout.tagPickerHeight)
+            .animation(.snappy(duration: 0.18), value: model.pickerIndex)
+            .onChange(of: model.pickerIndex) { _, _ in
+                if let tag = model.highlightedPickerTag {
+                    withAnimation(.snappy(duration: 0.18)) { proxy.scrollTo(tag, anchor: .center) }
+                }
+            }
+        }
     }
 
     private var suggestionBar: some View {
@@ -207,6 +258,7 @@ struct TagChip: View {
 struct LauncherSearchField: NSViewRepresentable {
     @Binding var text: String
     var focusToken: Int
+    var placeholder = "Hledat odkazy…"
 
     func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
 
@@ -217,7 +269,7 @@ struct LauncherSearchField: NSViewRepresentable {
         field.drawsBackground = false
         field.focusRingType = .none
         field.font = .systemFont(ofSize: 22, weight: .light)
-        field.placeholderString = "Hledat odkazy…   (#štítek filtruje)"
+        field.placeholderString = placeholder
         field.lineBreakMode = .byTruncatingTail
         field.cell?.usesSingleLineMode = true
         field.cell?.wraps = false
@@ -228,6 +280,9 @@ struct LauncherSearchField: NSViewRepresentable {
 
     func updateNSView(_ field: NSTextField, context: Context) {
         context.coordinator.parent = self
+        if field.placeholderString != placeholder {
+            field.placeholderString = placeholder
+        }
         if field.stringValue != text {
             field.stringValue = text
             if let editor = field.currentEditor() {
@@ -272,5 +327,66 @@ struct WindowDragArea: NSViewRepresentable {
         override func mouseDown(with event: NSEvent) {
             window?.performDrag(with: event)
         }
+    }
+}
+
+/// Štítek zvolený přes Tab – token vlevo ve vyhledávacím poli (klik na × ho odebere).
+@MainActor
+struct ActiveTagToken: View {
+    let tag: String
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "tag.fill")
+                .font(.system(size: 10, weight: .semibold))
+            Text(tag)
+                .font(.system(size: 13, weight: .semibold))
+                .lineLimit(1)
+            Button(action: onRemove) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .bold))
+            }
+            .buttonStyle(.plain)
+            .help("Odebrat štítek (⌫)")
+        }
+        .foregroundStyle(Color.white)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 4)
+        .liquidGlass(in: Capsule(), tint: Color.accentColor, fallback: Color.accentColor)
+        .fixedSize()
+    }
+}
+
+/// Bublina se štítkem v řadě výběru (Tab). Zvýrazněná je tónovaná a mírně zvětšená.
+@MainActor
+struct TagBubble: View {
+    let tag: String
+    let count: Int
+    let isHighlighted: Bool
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "tag.fill")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(isHighlighted ? AnyShapeStyle(Color.white) : AnyShapeStyle(Color.accentColor))
+            Text(tag)
+                .font(.system(size: 13, weight: .semibold))
+                .lineLimit(1)
+            Text("\(count)")
+                .font(.system(size: 11, weight: .medium, design: .rounded))
+                .foregroundStyle(isHighlighted ? AnyShapeStyle(Color.white.opacity(0.8)) : AnyShapeStyle(HierarchicalShapeStyle.secondary))
+        }
+        .foregroundStyle(isHighlighted ? Color.white : Color.primary)
+        .padding(.horizontal, 12)
+        .frame(height: 32)
+        .liquidGlass(
+            in: Capsule(),
+            tint: isHighlighted ? Color.accentColor : nil,
+            interactive: true,
+            fallback: isHighlighted ? Color.accentColor : Color.secondary.opacity(0.15)
+        )
+        .scaleEffect(isHighlighted ? 1.06 : 1)
+        .fixedSize()
     }
 }

@@ -48,8 +48,10 @@ záložek Chrome). Při prvním spuštění se zapne spouštění po přihláše
 | ⌘C | zkopírovat URL vybrané položky |
 | ⌘E | upravit vybranou položku |
 | ⌘N | nový odkaz (URL z dotazu se předvyplní) |
-| Tab | doplnit navrhovaný štítek |
-| Esc, klik mimo, zkratka znovu | zavřít |
+| Tab | výběr štítků (bubliny pod polem); při psaní `#…` doplní štítek |
+| ← / → , Tab / Enter (ve výběru štítků) | posun / použít štítek |
+| ⌫ v prázdném poli | odebrat poslední zvolený štítek |
+| Esc, klik mimo, zkratka znovu | zavřít (Esc nejdřív zavře výběr štítků) |
 
 Na macOS 26 Tahoe (při sestavení v Xcode 26) používá launcher Liquid Glass – skleněný
 panel, skleněné zvýraznění vybraného řádku a návrhy štítků. Na starších systémech
