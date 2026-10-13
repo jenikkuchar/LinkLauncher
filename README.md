@@ -22,7 +22,8 @@ Instalační DMG (aplikace + odkaz na složku Aplikace):
 scripts/make-dmg.sh       # → build/LinkLauncher-<verze>.dmg
 ```
 
-DMG se vytváří i v CI (artefakt `LinkLauncher-dmg` u každého běhu workflow).
+DMG se vytváří i v CI (artefakt `LinkLauncher-dmg` u každého běhu workflow – CI běží u PR
+nebo ručně přes Actions → CI → Run workflow).
 Aplikace je podepsaná jen ad-hoc a není notarizovaná – na jiném Macu ji poprvé
 otevřete přes pravý klik → Otevřít (nebo `xattr -dr com.apple.quarantine /Applications/LinkLauncher.app`).
 

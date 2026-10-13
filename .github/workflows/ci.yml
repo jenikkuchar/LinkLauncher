@@ -1,15 +1,17 @@
 name: CI
 
+# macOS minuty se u soukromého repozitáře počítají 10×, proto jen u PR (a ručně).
 on:
-  push:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   build-and-test:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, macos-15, macos-26]
+        # Xcode 26 (Liquid Glass); starší Xcode lze dočasně přidat např. macos-15.
+        os: [macos-26]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
