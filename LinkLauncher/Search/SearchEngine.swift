@@ -45,7 +45,7 @@ struct SearchEngine {
     func search(_ query: ParsedQuery, now: Date = Date(), limit: Int? = nil) -> [Link] {
         let terms = query.terms.map { Array($0.unicodeScalars) }
         // Klíče řazení předpočítané, aby porovnání nekopírovalo celé odkazy.
-        var scored: [(index: Int, openCount: Int, lastOpened: Double, score: Double)] = []
+        var scored: [(index: Int, tier: Int, openCount: Int, lastOpened: Double, score: Double)] = []
         scored.reserveCapacity(entries.count)
 
         for (index, entry) in entries.enumerated() {
@@ -58,18 +58,22 @@ struct SearchEngine {
                 continue
             }
             var total = 0.0
+            // Vrstva odkazu = nejslabší vrstva ze všech slov dotazu.
+            var tier = MatchTier.title
             var matchedAll = true
             for term in terms {
-                guard let s = Self.score(term: term, entry: entry) else {
+                guard let match = Self.match(term: term, entry: entry) else {
                     matchedAll = false
                     break
                 }
-                total += s
+                total += match.score
+                tier = max(tier, match.tier)
             }
             guard matchedAll else { continue }
             let link = entry.link
             scored.append((
                 index,
+                tier.rawValue,
                 link.openCount,
                 link.lastOpenedAt?.timeIntervalSinceReferenceDate ?? -.infinity,
                 total.rounded()
@@ -77,9 +81,10 @@ struct SearchEngine {
         }
 
         let entries = self.entries
-        // Dotaz jen filtruje; pořadí: nejčastěji otevírané, pak naposledy otevřené,
-        // teprve pak kvalita shody s dotazem (rozhoduje hlavně u neotevřených odkazů).
+        // Pořadí: vrstva shody (název → štítek → URL), v ní nejčastěji otevírané,
+        // pak naposledy otevřené, teprve pak kvalita shody s dotazem.
         scored.sort { a, b in
+            if a.tier != b.tier { return a.tier < b.tier }
             if a.openCount != b.openCount { return a.openCount > b.openCount }
             if a.lastOpened != b.lastOpened { return a.lastOpened > b.lastOpened }
             if a.score != b.score { return a.score > b.score }
@@ -92,20 +97,33 @@ struct SearchEngine {
         return scored.prefix(count).map { entries[$0.index].link }
     }
 
-    private static func score(term: [Unicode.Scalar], entry: Entry) -> Double? {
+    /// Kde se slovo dotazu našlo – nižší je silnější (řadí se výš).
+    enum MatchTier: Int, Comparable {
+        case title = 0, tag = 1, url = 2
+        static func < (a: MatchTier, b: MatchTier) -> Bool { a.rawValue < b.rawValue }
+    }
+
+    /// Vrstva = nejsilnější pole, ve kterém slovo je (název před štítkem před URL);
+    /// skóre = nejlepší vážená shoda přes všechna pole (rozhoduje až uvnitř vrstvy).
+    private static func match(term: [Unicode.Scalar], entry: Entry) -> (tier: MatchTier, score: Double)? {
+        var tier: MatchTier?
         var best: Double?
         if let s = FuzzyMatcher.score(term, in: entry.title) {
+            tier = .title
             best = s * titleWeight
         }
         for tag in entry.tags {
             if let s = FuzzyMatcher.score(term, in: tag) {
+                tier = tier ?? .tag
                 best = max(best ?? 0, s * tagWeight)
             }
         }
         if let s = FuzzyMatcher.score(term, in: entry.url) {
+            tier = tier ?? .url
             best = max(best ?? 0, s * urlWeight)
         }
-        return best
+        guard let tier, let best else { return nil }
+        return (tier, best)
     }
 
     /// Návrhy štítků pro rozepsaný `#token`. Prefixové shody první, pak ostatní obsahující text.
