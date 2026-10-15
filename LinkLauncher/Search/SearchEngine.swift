@@ -44,7 +44,8 @@ struct SearchEngine {
 
     func search(_ query: ParsedQuery, now: Date = Date(), limit: Int? = nil) -> [Link] {
         let terms = query.terms.map { Array($0.unicodeScalars) }
-        var scored: [(index: Int, score: Double)] = []
+        // Klíče řazení předpočítané, aby porovnání nekopírovalo celé odkazy.
+        var scored: [(index: Int, openCount: Int, lastOpened: Double, score: Double)] = []
         scored.reserveCapacity(entries.count)
 
         for (index, entry) in entries.enumerated() {
@@ -66,17 +67,22 @@ struct SearchEngine {
                 total += s
             }
             guard matchedAll else { continue }
-            scored.append((index, total.rounded()))
+            let link = entry.link
+            scored.append((
+                index,
+                link.openCount,
+                link.lastOpenedAt?.timeIntervalSinceReferenceDate ?? -.infinity,
+                total.rounded()
+            ))
         }
 
         let entries = self.entries
+        // Dotaz jen filtruje; pořadí: nejčastěji otevírané, pak naposledy otevřené,
+        // teprve pak kvalita shody s dotazem (rozhoduje hlavně u neotevřených odkazů).
         scored.sort { a, b in
+            if a.openCount != b.openCount { return a.openCount > b.openCount }
+            if a.lastOpened != b.lastOpened { return a.lastOpened > b.lastOpened }
             if a.score != b.score { return a.score > b.score }
-            // Nejčastěji otevírané první, při shodě naposledy otevřené.
-            let la = entries[a.index].link, lb = entries[b.index].link
-            if la.openCount != lb.openCount { return la.openCount > lb.openCount }
-            let da = la.lastOpenedAt ?? .distantPast, db = lb.lastOpenedAt ?? .distantPast
-            if da != db { return da > db }
             let ka = entries[a.index].sortKey, kb = entries[b.index].sortKey
             if ka != kb { return ka < kb }
             return a.index < b.index

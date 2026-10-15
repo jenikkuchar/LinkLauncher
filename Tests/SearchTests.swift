@@ -117,9 +117,19 @@ final class SearchTests: XCTestCase {
         XCTAssertEqual(engine.search("", now: now).map(\.title), ["Nedávno", "Dávno"])
     }
 
-    func testMatchScoreStillBeatsOpenCount() {
+    func testFilteredResultsSortedByOpenCount() {
         let engine = SearchEngine(links: [
+            link("Jira", "https://b.example.com"),
             link("Moje Jira", "https://a.example.com", opened: 50, daysAgo: 1),
+            link("Jira wiki", "https://c.example.com", opened: 3, daysAgo: 1),
+            link("Wiki", "https://d.example.com", opened: 99, daysAgo: 1),
+        ])
+        XCTAssertEqual(engine.search("jira", now: now).map(\.title), ["Moje Jira", "Jira wiki", "Jira"])
+    }
+
+    func testMatchScoreDecidesAmongEquallyOpened() {
+        let engine = SearchEngine(links: [
+            link("Moje Jira", "https://a.example.com"),
             link("Jira", "https://b.example.com"),
         ])
         XCTAssertEqual(engine.search("jira", now: now).first?.title, "Jira")
