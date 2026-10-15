@@ -117,6 +117,35 @@ final class SearchTests: XCTestCase {
         XCTAssertEqual(engine.search("", now: now).map(\.title), ["Nedávno", "Dávno"])
     }
 
+    func testTitleMatchesBeforeURLMatchesEvenIfLessOpened() {
+        // Případ z praxe: „db“ v názvu má přednost před častěji otevíraným odkazem s „db“ jen v URL.
+        let engine = SearchEngine(links: [
+            link("Kanban Board", "https://tracker.example.com/dashboard", opened: 80, daysAgo: 1),
+            link("DB CloudSQL (DAT PROD)", "https://console.example.com/sql/a", opened: 5, daysAgo: 2),
+            link("DB CloudSQL (NAY PROD)", "https://console.example.com/sql/b", opened: 2, daysAgo: 3),
+        ])
+        XCTAssertEqual(engine.search("db", now: now).map(\.title), [
+            "DB CloudSQL (DAT PROD)", "DB CloudSQL (NAY PROD)", "Kanban Board",
+        ])
+    }
+
+    func testTagTierBetweenTitleAndURL() {
+        let engine = SearchEngine(links: [
+            link("URL", "https://jira.example.com", opened: 9, daysAgo: 1),
+            link("Štítek", "https://a.example.com", tags: ["jira"], opened: 5, daysAgo: 1),
+            link("Moje Jira", "https://b.example.com", opened: 1, daysAgo: 1),
+        ])
+        XCTAssertEqual(engine.search("jira", now: now).map(\.title), ["Moje Jira", "Štítek", "URL"])
+    }
+
+    func testMultiWordTierIsWeakestWord() {
+        let engine = SearchEngine(links: [
+            link("DB prod", "https://a.example.com", opened: 1, daysAgo: 1),
+            link("DB", "https://prod.example.com", opened: 50, daysAgo: 1),
+        ])
+        XCTAssertEqual(engine.search("db prod", now: now).map(\.title), ["DB prod", "DB"])
+    }
+
     func testFilteredResultsSortedByOpenCount() {
         let engine = SearchEngine(links: [
             link("Jira", "https://b.example.com"),
