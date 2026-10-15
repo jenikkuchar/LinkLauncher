@@ -70,13 +70,14 @@ struct SearchEngine {
         }
 
         let entries = self.entries
+        // Dotaz jen filtruje; pořadí: nejčastěji otevírané, pak naposledy otevřené,
+        // teprve pak kvalita shody s dotazem (rozhoduje hlavně u neotevřených odkazů).
         scored.sort { a, b in
-            if a.score != b.score { return a.score > b.score }
-            // Nejčastěji otevírané první, při shodě naposledy otevřené.
             let la = entries[a.index].link, lb = entries[b.index].link
             if la.openCount != lb.openCount { return la.openCount > lb.openCount }
             let da = la.lastOpenedAt ?? .distantPast, db = lb.lastOpenedAt ?? .distantPast
             if da != db { return da > db }
+            if a.score != b.score { return a.score > b.score }
             let ka = entries[a.index].sortKey, kb = entries[b.index].sortKey
             if ka != kb { return ka < kb }
             return a.index < b.index

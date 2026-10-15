@@ -63,8 +63,8 @@ nepamatuje – při dalším otevření je launcher opět ve výchozím místě.
 
 **Vyhledávání:** fuzzy přes název (nejvyšší váha), štítky a URL; bez ohledu na velikost
 písmen a diakritiku. `#štítek` filtruje (více štítků = AND), např. `#práce jira`.
-Odkazy jsou seřazené od nejčastěji otevíraných (při shodě naposledy otevřené první);
-při hledání má přednost kvalita shody.
+Odkazy jsou seřazené od nejčastěji otevíraných (při shodě naposledy otevřené první),
+i při hledání – dotaz jen filtruje; kvalita shody rozhoduje až při stejném počtu otevření.
 
 ## Import záložek
 
