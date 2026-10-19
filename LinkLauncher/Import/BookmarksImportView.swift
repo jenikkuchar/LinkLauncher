@@ -78,9 +78,8 @@ final class BookmarksImportModel: ObservableObject {
         profiles = ChromeProfileLocator.profiles()
         if profiles.isEmpty {
             setRoots([])
-            errorMessage = "Nenalezen žádný profil Chrome se záložkami v ~/Library/Application Support/Google/Chrome. "
-                + "Pokud Chrome používáte, povolte aplikaci LinkLauncher přístup v Nastavení systému → Soukromí a zabezpečení, "
-                + "nebo použijte import z HTML souboru."
+            errorMessage = "Profily Chrome se nepodařilo načíst (chybí oprávnění nebo Chrome není nainstalovaný). "
+                + "Vyberte soubor Bookmarks ručně tlačítkem „Vybrat soubor Bookmarks…“, nebo použijte import z HTML."
             return
         }
         errorMessage = nil
@@ -88,6 +87,26 @@ final class BookmarksImportModel: ObservableObject {
             loadProfileBookmarks()
         } else {
             selectedProfileID = profiles.first?.id
+        }
+    }
+
+    /// Ruční výběr souboru `Bookmarks` – soubor zvolený v dialogu macOS zpřístupní
+    /// i bez oprávnění k datům jiných aplikací.
+    func chooseChromeBookmarksFile() {
+        let panel = NSOpenPanel()
+        panel.title = "Vyberte soubor Bookmarks z profilu Chrome"
+        panel.message = "Profil „Default“ nebo „Profile N“ → soubor Bookmarks"
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.showsHiddenFiles = true
+        panel.directoryURL = ChromeProfileLocator.defaultChromeDirectory
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            setRoots(try ChromeBookmarksParser.parse(data: Data(contentsOf: url)))
+            errorMessage = roots.isEmpty ? "Soubor neobsahuje žádné záložky." : nil
+        } catch {
+            setRoots([])
+            errorMessage = "Soubor se nepodařilo načíst: \(error.localizedDescription)"
         }
     }
 
@@ -300,6 +319,8 @@ struct BookmarksImportView: View {
                     }
                     .help("Znovu načíst profily a záložky")
                     Spacer()
+                    Button("Vybrat soubor Bookmarks…") { model.chooseChromeBookmarksFile() }
+                        .help("Když se profil nenačte (oprávnění), vyberte soubor ručně")
                 }
             case .htmlFile:
                 HStack {

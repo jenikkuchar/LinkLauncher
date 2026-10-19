@@ -16,14 +16,21 @@ fi
 echo "▸ Generuji Xcode projekt…"
 xcodegen generate --quiet
 
-echo "▸ Sestavuji Release…"
+source "$ROOT/scripts/signing-identity.sh"
+IDENTITY="$(linklauncher_signing_identity)"
+if [[ "$IDENTITY" == "-" ]]; then
+    echo "ℹ︎ Podepisuji ad-hoc – macOS po každém buildu zapomene udělená oprávnění."
+    echo "  Jednorázově to vyřeší: scripts/create-signing-identity.sh"
+fi
+
+echo "▸ Sestavuji Release (podpis: $IDENTITY)…"
 xcodebuild \
     -project "$APP_NAME.xcodeproj" \
     -scheme "$APP_NAME" \
     -configuration Release \
     -derivedDataPath "$DERIVED" \
     -destination "generic/platform=macOS" \
-    CODE_SIGN_IDENTITY="-" \
+    CODE_SIGN_IDENTITY="$IDENTITY" \
     build | (command -v xcpretty >/dev/null 2>&1 && xcpretty || cat)
 
 BUILT="$DERIVED/Build/Products/Release/$APP_NAME.app"

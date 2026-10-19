@@ -27,6 +27,15 @@ nebo ručně přes Actions → CI → Run workflow).
 Aplikace je podepsaná jen ad-hoc a není notarizovaná – na jiném Macu ji poprvé
 otevřete přes pravý klik → Otevřít (nebo `xattr -dr com.apple.quarantine /Applications/LinkLauncher.app`).
 
+**Stálý podpis (doporučeno):** aplikace se podepisuje ad-hoc a macOS po každém novém buildu
+zapomene udělená oprávnění (např. přístup k datům Chrome). Jednorázově spusťte
+
+```bash
+scripts/create-signing-identity.sh   # vlastní certifikát v klíčence, bez Apple účtu
+```
+
+a `install.sh` / `make-dmg.sh` ho pak použijí automaticky – oprávnění vydrží i po aktualizaci.
+
 Vývoj v Xcode:
 
 ```bash
@@ -74,6 +83,9 @@ Okno importu (menu bar → Importovat záložky…) má dva zdroje:
 **Profil Chrome** – načte záložky přímo z profilu v `~/Library/Application Support/Google/Chrome/`
 (výběr profilu, jména z `Local State`). macOS se může zeptat na přístup k datům jiných
 aplikací – povolte ho v Nastavení systému → Soukromí a zabezpečení.
+
+Pokud macOS přístup k datům Chrome blokuje, použijte tlačítko „Vybrat soubor Bookmarks…“
+(soubor vybraný v dialogu je přístupný vždy).
 
 **HTML soubor** – export záložek (formát Netscape Bookmark File) z Chrome, Safari,
 Firefoxu nebo Edge:
