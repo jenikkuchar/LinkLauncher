@@ -12,7 +12,7 @@ NAME="$LINKLAUNCHER_SIGNING_NAME"
 KEYCHAIN="$HOME/Library/Keychains/login.keychain-db"
 
 if [[ "$(linklauncher_signing_identity)" == "$NAME" ]]; then
-    echo "✓ Certifikát „$NAME“ už v klíčence je."
+    echo "✓ Certifikát „${NAME}“ už v klíčence je."
     exit 0
 fi
 
@@ -34,7 +34,7 @@ extendedKeyUsage = critical,codeSigning
 subjectKeyIdentifier = hash
 CNF
 
-echo "▸ Vytvářím certifikát „$NAME“ (platnost 10 let)…"
+echo "▸ Vytvářím certifikát „${NAME}“ (platnost 10 let)…"
 # Systémový /usr/bin/openssl (LibreSSL) vytváří .p12, který klíčenka umí importovat.
 /usr/bin/openssl req -x509 -newkey rsa:2048 -nodes -sha256 -days 3650 \
     -config "$TMP/cert.cnf" -keyout "$TMP/key.pem" -out "$TMP/cert.pem" 2>/dev/null
