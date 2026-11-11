@@ -41,6 +41,8 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: Config/Info.plist
         CODE_SIGN_ENTITLEMENTS: Config/LinkLauncher.entitlements
+        # Ikona aplikace (LinkLauncher/Assets.xcassets, generuje scripts/generate-icon.py)
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # App Sandbox vypnutý – aplikace čte soubory Chrome
         ENABLE_APP_SANDBOX: NO
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
