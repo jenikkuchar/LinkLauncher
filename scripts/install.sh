@@ -30,7 +30,7 @@ xcodebuild \
     -configuration Release \
     -derivedDataPath "$DERIVED" \
     -destination "generic/platform=macOS" \
-    CODE_SIGN_IDENTITY="$IDENTITY" \
+    CODE_SIGN_IDENTITY="-" \
     build | (command -v xcpretty >/dev/null 2>&1 && xcpretty || cat)
 
 BUILT="$DERIVED/Build/Products/Release/$APP_NAME.app"
@@ -38,6 +38,8 @@ if [[ ! -d "$BUILT" ]]; then
     echo "Build nenalezen: $BUILT" >&2
     exit 1
 fi
+
+linklauncher_resign "$BUILT" "$IDENTITY" "$ROOT/Config/LinkLauncher.entitlements"
 
 if pgrep -x "$APP_NAME" >/dev/null; then
     echo "▸ Ukončuji běžící instanci…"
