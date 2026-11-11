@@ -31,7 +31,7 @@ xcodebuild \
     -configuration Release \
     -derivedDataPath "$DERIVED" \
     -destination "generic/platform=macOS" \
-    CODE_SIGN_IDENTITY="$IDENTITY" \
+    CODE_SIGN_IDENTITY="-" \
     build | (command -v xcpretty >/dev/null 2>&1 && xcpretty || cat)
 
 APP="$DERIVED/Build/Products/Release/$APP_NAME.app"
@@ -39,6 +39,8 @@ if [[ ! -d "$APP" ]]; then
     echo "Build nenalezen: $APP" >&2
     exit 1
 fi
+
+linklauncher_resign "$APP" "$IDENTITY" "$ROOT/Config/LinkLauncher.entitlements"
 
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")"
 DMG="$OUT_DIR/$APP_NAME-$VERSION.dmg"
