@@ -147,6 +147,11 @@ se jednotně v launcheru i ve správě.
 Štítky se ukládají malými písmeny bez mezer (mezera → `-`). Favicony se cachují
 v `~/Library/Caches/LinkLauncher/favicons`.
 
+## Ikona
+
+Ikonu aplikace (`LinkLauncher/Assets.xcassets/AppIcon.appiconset`) generuje skript
+`python3 scripts/generate-icon.py` (vyžaduje Pillow) – barvy a tvar se upravují v něm.
+
 ## Struktura
 
 ```
